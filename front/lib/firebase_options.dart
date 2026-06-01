@@ -53,7 +53,7 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyDLfaMXJmzJxTN_KnixY9yFdjlqCeDEmoI',
+    apiKey: '',
     appId: '1:350701395689:android:c7b3379ba4bd6419b41a78',
     messagingSenderId: '350701395689',
     projectId: 'chat-7d5c1',
