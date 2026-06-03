@@ -16,9 +16,14 @@ import java.util.Map;
 public class ReceiptService {
 
     private final ItemCategoryService itemCategoryService;
+    private final ReceiptFirestoreService receiptFirestoreService;
 
-    public ReceiptService(ItemCategoryService itemCategoryService) {
+    public ReceiptService(
+        ItemCategoryService itemCategoryService,
+        ReceiptFirestoreService receiptFirestoreService
+    ) {
         this.itemCategoryService = itemCategoryService;
+        this.receiptFirestoreService = receiptFirestoreService;
     }
 
     public ReceiptAnalysisResponse analyzeOcrText(String userId, String ocrText) {
@@ -32,7 +37,14 @@ public class ReceiptService {
 
         ReceiptAnalysisResponse.Summary summary = createSummary(analyzedItems);
 
+        String receiptId = receiptFirestoreService.saveReceiptAnalysis(
+                userId,
+                analyzedItems,
+                summary
+        );
+
         return new ReceiptAnalysisResponse(
+                receiptId,
                 userId,
                 analyzedItems,
                 summary

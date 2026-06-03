@@ -4,6 +4,7 @@ import java.util.List;
 
 public class ReceiptAnalysisResponse {
 
+    private String receiptId;
     private String userId;
     private List<ReceiptItemAnalysisResponse> items;
     private Summary summary;
@@ -12,13 +13,19 @@ public class ReceiptAnalysisResponse {
     }
 
     public ReceiptAnalysisResponse(
+            String receiptId,
             String userId,
             List<ReceiptItemAnalysisResponse> items,
             Summary summary
     ) {
+        this.receiptId = receiptId;
         this.userId = userId;
         this.items = items;
         this.summary = summary;
+    }
+
+    public String getReceiptId() {
+        return receiptId;
     }
 
     public String getUserId() {
