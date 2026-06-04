@@ -1,16 +1,44 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_naver_login/flutter_naver_login.dart';
+import 'package:flutter_naver_login/interface/types/naver_login_status.dart';
+import 'package:http/http.dart' as http;
+import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart' as kakao;
 
 import 'firebase_options.dart';
 
+const String kakaoNativeAppKey = String.fromEnvironment('KAKAO_NATIVE_APP_KEY');
+const String configuredAuthApiBaseUrl = String.fromEnvironment(
+  'AUTH_API_BASE_URL',
+);
+
+String get authApiBaseUrl {
+  if (configuredAuthApiBaseUrl.isNotEmpty) {
+    return configuredAuthApiBaseUrl;
+  }
+  if (Platform.isAndroid) {
+    return 'http://10.0.2.2:8080';
+  }
+  return 'http://localhost:8080';
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } on UnsupportedError {
+    await Firebase.initializeApp();
+  }
+  if (kakaoNativeAppKey.isNotEmpty) {
+    kakao.KakaoSdk.init(nativeAppKey: kakaoNativeAppKey);
+  }
   runApp(const EcoApp());
 }
 
@@ -53,7 +81,7 @@ class AuthGate extends StatelessWidget {
           return const LoginPage();
         }
 
-        return HomePage(user: user);
+        return UserProfileGate(user: user);
       },
     );
   }
@@ -67,125 +95,215 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  bool _isLoading = false;
+  bool _isKakaoLoading = false;
+  bool _isNaverLoading = false;
   String? _errorMessage;
 
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _login() async {
-    if (!_formKey.currentState!.validate()) {
+  Future<void> _loginWithKakao() async {
+    if (kakaoNativeAppKey.isEmpty) {
+      setState(() {
+        _errorMessage = '카카오 Native App Key가 설정되지 않았습니다.';
+      });
       return;
     }
 
     setState(() {
-      _isLoading = true;
+      _isKakaoLoading = true;
       _errorMessage = null;
     });
 
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
+      final token = await _requestKakaoToken();
+      final response = await http.post(
+        Uri.parse('$authApiBaseUrl/api/auth/kakao'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'accessToken': token.accessToken}),
       );
-    } on FirebaseAuthException catch (error) {
+
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw Exception('카카오 로그인 서버 요청에 실패했습니다.');
+      }
+
+      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      final customToken = body['customToken'] as String?;
+      if (customToken == null || customToken.isEmpty) {
+        throw Exception('Firebase 로그인 토큰을 받지 못했습니다.');
+      }
+
+      final credential =
+          await FirebaseAuth.instance.signInWithCustomToken(customToken);
+      final user = credential.user;
+      if (user != null) {
+        await _ensureUserProfile(user);
+      }
+    } catch (error) {
       setState(() {
-        _errorMessage = _authErrorMessage(error);
+        _errorMessage = '카카오 로그인에 실패했습니다. $error';
       });
     } finally {
       if (mounted) {
         setState(() {
-          _isLoading = false;
+          _isKakaoLoading = false;
         });
       }
     }
+  }
+
+  Future<void> _loginWithNaver() async {
+    setState(() {
+      _isNaverLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final loginResult = await FlutterNaverLogin.logIn();
+      if (loginResult.status != NaverLoginStatus.loggedIn) {
+        throw Exception('네이버 로그인이 취소되었거나 실패했습니다.');
+      }
+
+      final token = await FlutterNaverLogin.getCurrentAccessToken();
+      final response = await http.post(
+        Uri.parse('$authApiBaseUrl/api/auth/naver'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'accessToken': token.accessToken}),
+      );
+
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw Exception('네이버 로그인 서버 요청에 실패했습니다.');
+      }
+
+      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      final customToken = body['customToken'] as String?;
+      if (customToken == null || customToken.isEmpty) {
+        throw Exception('Firebase 로그인 토큰을 받지 못했습니다.');
+      }
+
+      final credential =
+          await FirebaseAuth.instance.signInWithCustomToken(customToken);
+      final user = credential.user;
+      if (user != null) {
+        await _ensureUserProfile(user);
+      }
+    } catch (error) {
+      setState(() {
+        _errorMessage = '네이버 로그인에 실패했습니다. $error';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isNaverLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<kakao.OAuthToken> _requestKakaoToken() async {
+    if (await kakao.isKakaoTalkInstalled()) {
+      try {
+        return kakao.UserApi.instance.loginWithKakaoTalk();
+      } catch (_) {
+        return kakao.UserApi.instance.loginWithKakaoAccount();
+      }
+    }
+
+    return kakao.UserApi.instance.loginWithKakaoAccount();
   }
 
   @override
   Widget build(BuildContext context) {
     return AuthScaffold(
       title: '로그인',
-      subtitle: '이메일과 비밀번호로 ECO에 접속하세요.',
-      child: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            TextFormField(
-              controller: _emailController,
-              decoration: const InputDecoration(labelText: '이메일'),
-              keyboardType: TextInputType.emailAddress,
-              validator: _validateEmail,
+      subtitle: 'SNS로 로그인한 뒤 별명을 입력하면 ECO를 이용할 수 있어요.',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (_errorMessage != null) ...[
+            Text(
+              _errorMessage!,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
             const SizedBox(height: 12),
-            TextFormField(
-              controller: _passwordController,
-              decoration: const InputDecoration(labelText: '비밀번호'),
-              obscureText: true,
-              validator: _validatePassword,
-            ),
-            if (_errorMessage != null) ...[
-              const SizedBox(height: 12),
-              Text(
-                _errorMessage!,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
-              ),
-            ],
-            const SizedBox(height: 20),
-            FilledButton(
-              onPressed: _isLoading ? null : _login,
-              child: Text(_isLoading ? '로그인 중...' : '로그인'),
-            ),
-            TextButton(
-              onPressed: _isLoading
-                  ? null
-                  : () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const SignUpPage(),
-                        ),
-                      );
-                    },
-              child: const Text('회원가입'),
-            ),
           ],
-        ),
+          FilledButton.tonal(
+            onPressed: _isKakaoLoading ? null : _loginWithKakao,
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFFEE500),
+              foregroundColor: const Color(0xFF191919),
+            ),
+            child: Text(_isKakaoLoading ? '카카오 로그인 중...' : '카카오 로그인'),
+          ),
+          const SizedBox(height: 8),
+          FilledButton.tonal(
+            onPressed: _isNaverLoading ? null : _loginWithNaver,
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF03C75A),
+              foregroundColor: Colors.white,
+            ),
+            child: Text(_isNaverLoading ? '네이버 로그인 중...' : '네이버 로그인'),
+          ),
+        ],
       ),
     );
   }
 }
 
-class SignUpPage extends StatefulWidget {
-  const SignUpPage({super.key});
+class UserProfileGate extends StatelessWidget {
+  const UserProfileGate({super.key, required this.user});
+
+  final User user;
 
   @override
-  State<SignUpPage> createState() => _SignUpPageState();
+  Widget build(BuildContext context) {
+    return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      future: _ensureUserProfile(user),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        final data = snapshot.data?.data();
+        final nickname = (data?['nickname'] as String?)?.trim() ?? '';
+        final needsNickname = !snapshot.hasData ||
+            !snapshot.data!.exists ||
+            nickname.isEmpty ||
+            nickname == '사용자' ||
+            nickname == '카카오 사용자' ||
+            nickname == '네이버 사용자';
+
+        if (needsNickname) {
+          return NicknameSetupPage(user: user);
+        }
+
+        return HomePage(user: user);
+      },
+    );
+  }
 }
 
-class _SignUpPageState extends State<SignUpPage> {
+class NicknameSetupPage extends StatefulWidget {
+  const NicknameSetupPage({super.key, required this.user});
+
+  final User user;
+
+  @override
+  State<NicknameSetupPage> createState() => _NicknameSetupPageState();
+}
+
+class _NicknameSetupPageState extends State<NicknameSetupPage> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
   final _nicknameController = TextEditingController();
   bool _isLoading = false;
   String? _errorMessage;
 
   @override
   void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
     _nicknameController.dispose();
     super.dispose();
   }
 
-  Future<void> _signUp() async {
+  Future<void> _saveNickname() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -195,38 +313,34 @@ class _SignUpPageState extends State<SignUpPage> {
       _errorMessage = null;
     });
 
+    final nickname = _nicknameController.text.trim();
+
     try {
-      final credential = await FirebaseAuth.instance
-          .createUserWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-      );
-
-      final user = credential.user;
-      if (user == null) {
-        throw FirebaseAuthException(
-          code: 'user-not-found',
-          message: '회원 정보를 만들 수 없습니다.',
-        );
-      }
-
-      await user.updateDisplayName(_nicknameController.text.trim());
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-        'email': user.email,
-        'nickname': _nicknameController.text.trim(),
+      await widget.user.updateDisplayName(nickname);
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.user.uid)
+          .set({
+        'email': widget.user.email,
+        'nickname': nickname,
         'ecoPoint': 0,
         'grade': 'Seed',
         'badges': <String>[],
+        'loginProvider': _loginProviderOf(widget.user),
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
-      });
+      }, SetOptions(merge: true));
 
       if (mounted) {
-        Navigator.of(context).pop();
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => const AuthGate(),
+          ),
+        );
       }
-    } on FirebaseAuthException catch (error) {
+    } catch (error) {
       setState(() {
-        _errorMessage = _authErrorMessage(error);
+        _errorMessage = '별명 저장에 실패했습니다. $error';
       });
     } finally {
       if (mounted) {
@@ -240,39 +354,17 @@ class _SignUpPageState extends State<SignUpPage> {
   @override
   Widget build(BuildContext context) {
     return AuthScaffold(
-      title: '회원가입',
-      subtitle: '이메일, 비밀번호, 닉네임을 입력하세요.',
+      title: '별명 입력',
+      subtitle: 'ECO에서 사용할 별명을 입력하세요.',
       child: Form(
         key: _formKey,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             TextFormField(
-              controller: _emailController,
-              decoration: const InputDecoration(labelText: '이메일'),
-              keyboardType: TextInputType.emailAddress,
-              validator: _validateEmail,
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _passwordController,
-              decoration: const InputDecoration(labelText: '비밀번호'),
-              obscureText: true,
-              validator: _validatePassword,
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
               controller: _nicknameController,
-              decoration: const InputDecoration(labelText: '닉네임'),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return '닉네임을 입력해주세요.';
-                }
-                if (value.trim().length < 2) {
-                  return '닉네임은 2자 이상이어야 합니다.';
-                }
-                return null;
-              },
+              decoration: const InputDecoration(labelText: '별명'),
+              validator: _validateNickname,
             ),
             if (_errorMessage != null) ...[
               const SizedBox(height: 12),
@@ -283,8 +375,8 @@ class _SignUpPageState extends State<SignUpPage> {
             ],
             const SizedBox(height: 20),
             FilledButton(
-              onPressed: _isLoading ? null : _signUp,
-              child: Text(_isLoading ? '가입 중...' : '회원가입'),
+              onPressed: _isLoading ? null : _saveNickname,
+              child: Text(_isLoading ? '저장 중...' : '로그인 완료'),
             ),
           ],
         ),
@@ -310,26 +402,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _ensureUserDocument() async {
-    final userDoc =
-        FirebaseFirestore.instance.collection('users').doc(widget.user.uid);
-    final snapshot = await userDoc.get();
-
-    if (snapshot.exists) {
-      await userDoc.update({
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-      return;
-    }
-
-    await userDoc.set({
-      'email': widget.user.email,
-      'nickname': widget.user.displayName ?? '사용자',
-      'ecoPoint': 0,
-      'grade': 'Seed',
-      'badges': <String>[],
-      'createdAt': FieldValue.serverTimestamp(),
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
+    await _ensureUserProfile(widget.user);
   }
 
   @override
@@ -343,8 +416,21 @@ class _HomePageState extends State<HomePage> {
         actions: [
           IconButton(
             tooltip: '로그아웃',
-            onPressed: () => FirebaseAuth.instance.signOut(),
+            onPressed: () => _signOut(context),
             icon: const Icon(Icons.logout),
+          ),
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'delete_account') {
+                _confirmDeleteAccount(context);
+              }
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem(
+                value: 'delete_account',
+                child: Text('회원 탈퇴'),
+              ),
+            ],
           ),
         ],
       ),
@@ -393,6 +479,169 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
+
+  Future<void> _confirmDeleteAccount(BuildContext context) async {
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('회원 탈퇴'),
+        content: const Text('계정과 사용자 정보가 삭제됩니다. 정말 탈퇴할까요?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Theme.of(context).colorScheme.onError,
+            ),
+            child: const Text('탈퇴'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldDelete != true || !context.mounted) {
+      return;
+    }
+
+    await _deleteAccount(context, widget.user);
+  }
+}
+
+Future<void> _signOut(BuildContext context) async {
+  final user = FirebaseAuth.instance.currentUser;
+  final provider = user == null ? null : _loginProviderOf(user);
+
+  await FirebaseAuth.instance.signOut();
+
+  if (context.mounted) {
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const AuthGate()),
+      (route) => false,
+    );
+  }
+
+  if (provider != null) {
+    Future.microtask(() => _clearSocialSession(provider));
+  }
+}
+
+Future<void> _deleteAccount(BuildContext context, User user) async {
+  final messenger = ScaffoldMessenger.of(context);
+  final provider = _loginProviderOf(user);
+
+  try {
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .delete();
+    await user.delete();
+    if (context.mounted) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const AuthGate()),
+        (route) => false,
+      );
+    }
+    Future.microtask(() => _unlinkSocialLogin(provider));
+  } on FirebaseAuthException catch (error) {
+    if (error.code == 'requires-recent-login') {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('보안을 위해 다시 로그인한 뒤 탈퇴해주세요.')),
+      );
+      await _signOut(context);
+      return;
+    }
+
+    messenger.showSnackBar(
+      SnackBar(content: Text('회원 탈퇴에 실패했습니다. ${_authErrorMessage(error)}')),
+    );
+  } catch (error) {
+    messenger.showSnackBar(
+      SnackBar(content: Text('회원 탈퇴에 실패했습니다. $error')),
+    );
+  }
+}
+
+Future<DocumentSnapshot<Map<String, dynamic>>> _ensureUserProfile(
+  User user,
+) async {
+  final userDoc = FirebaseFirestore.instance.collection('users').doc(user.uid);
+  final snapshot = await userDoc.get();
+
+  if (snapshot.exists) {
+    await userDoc.set({
+      'email': user.email,
+      'loginProvider': _loginProviderOf(user),
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+    return userDoc.get();
+  }
+
+  await userDoc.set({
+    'email': user.email,
+    'nickname': user.uid.startsWith('kakao_') || user.uid.startsWith('naver_')
+        ? ''
+        : user.displayName ?? '사용자',
+    'ecoPoint': 0,
+    'grade': 'Seed',
+    'badges': <String>[],
+    'loginProvider': _loginProviderOf(user),
+    'createdAt': FieldValue.serverTimestamp(),
+    'updatedAt': FieldValue.serverTimestamp(),
+  });
+
+  return userDoc.get();
+}
+
+Future<void> _clearSocialSession(String provider) async {
+  try {
+    if (provider == 'kakao') {
+      await kakao.UserApi.instance
+          .logout()
+          .timeout(const Duration(seconds: 3));
+    } else if (provider == 'naver') {
+      await FlutterNaverLogin.logOut().timeout(const Duration(seconds: 3));
+    }
+  } catch (_) {}
+}
+
+Future<void> _unlinkSocialLogin(String provider) async {
+  if (provider == 'kakao') {
+    try {
+      await kakao.UserApi.instance.unlink().timeout(const Duration(seconds: 5));
+    } catch (_) {
+      try {
+        await kakao.UserApi.instance
+            .logout()
+            .timeout(const Duration(seconds: 3));
+      } catch (_) {}
+    }
+    return;
+  }
+
+  if (provider == 'naver') {
+    try {
+      await FlutterNaverLogin.logOutAndDeleteToken()
+          .timeout(const Duration(seconds: 5));
+    } catch (_) {
+      try {
+        await FlutterNaverLogin.logOut().timeout(const Duration(seconds: 3));
+      } catch (_) {}
+    }
+  }
+}
+
+String _loginProviderOf(User user) {
+  if (user.uid.startsWith('kakao_')) {
+    return 'kakao';
+  }
+  if (user.uid.startsWith('naver_')) {
+    return 'naver';
+  }
+  return 'email';
 }
 
 class AuthScaffold extends StatelessWidget {
@@ -471,40 +720,22 @@ class _InfoTile extends StatelessWidget {
   }
 }
 
-String? _validateEmail(String? value) {
-  final email = value?.trim() ?? '';
-  if (email.isEmpty) {
-    return '이메일을 입력해주세요.';
+String? _validateNickname(String? value) {
+  final nickname = value?.trim() ?? '';
+  if (nickname.isEmpty) {
+    return '별명을 입력해주세요.';
   }
-  if (!email.contains('@')) {
-    return '올바른 이메일 형식이 아닙니다.';
-  }
-  return null;
-}
-
-String? _validatePassword(String? value) {
-  final password = value ?? '';
-  if (password.isEmpty) {
-    return '비밀번호를 입력해주세요.';
-  }
-  if (password.length < 6) {
-    return '비밀번호는 6자 이상이어야 합니다.';
+  if (nickname.length < 2) {
+    return '별명은 2자 이상이어야 합니다.';
   }
   return null;
 }
 
 String _authErrorMessage(FirebaseAuthException error) {
   switch (error.code) {
-    case 'email-already-in-use':
-      return '이미 사용 중인 이메일입니다.';
-    case 'invalid-email':
-      return '올바른 이메일 형식이 아닙니다.';
     case 'user-not-found':
-    case 'wrong-password':
     case 'invalid-credential':
-      return '이메일 또는 비밀번호가 일치하지 않습니다.';
-    case 'weak-password':
-      return '비밀번호가 너무 약합니다.';
+      return '로그인 정보가 유효하지 않습니다.';
     default:
       return error.message ?? '요청을 처리하지 못했습니다.';
   }

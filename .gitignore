@@ -1,0 +1,18 @@
+.DS_Store
+.idea/
+front/
+
+# Local secrets and generated config
+**/.env
+**/local.properties
+**/Secrets.xcconfig
+**/firebase_options.dart
+**/google-services.json
+**/GoogleService-Info.plist
+**/*firebase-adminsdk*.json
+**/service-account*.json
+
+# Build outputs
+**/.dart_tool/
+**/build/
+**/Pods/
