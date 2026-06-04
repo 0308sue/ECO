@@ -1,9 +1,10 @@
-package com.eco.backend.item.dto;
+package com.eco.backend.receipt.dto;
 
-public class ItemCategoryResponse {
+public class ReceiptItemAnalysisResponse {
 
     private String originalName;
     private String normalizedName;
+    private int price;
     private String category;
     private String subCategory;
     private String matchedKeyword;
@@ -11,12 +12,13 @@ public class ItemCategoryResponse {
     private double estimatedCarbonKg;
     private int carbonScore;
 
-    public ItemCategoryResponse() {
+    public ReceiptItemAnalysisResponse() {
     }
 
-    public ItemCategoryResponse(
+    public ReceiptItemAnalysisResponse(
             String originalName,
             String normalizedName,
+            int price,
             String category,
             String subCategory,
             String matchedKeyword,
@@ -26,6 +28,7 @@ public class ItemCategoryResponse {
     ) {
         this.originalName = originalName;
         this.normalizedName = normalizedName;
+        this.price = price;
         this.category = category;
         this.subCategory = subCategory;
         this.matchedKeyword = matchedKeyword;
@@ -40,6 +43,10 @@ public class ItemCategoryResponse {
 
     public String getNormalizedName() {
         return normalizedName;
+    }
+
+    public int getPrice() {
+        return price;
     }
 
     public String getCategory() {
