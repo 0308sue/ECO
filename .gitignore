@@ -1,6 +1,7 @@
 .DS_Store
 .idea/
 front/
+.vscode/
 
 # Local secrets and generated config
 **/.env
