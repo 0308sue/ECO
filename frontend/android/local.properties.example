@@ -1,0 +1,4 @@
+kakao.native_app_key=your_kakao_native_app_key
+naver.client_id=your_naver_client_id
+naver.client_secret=your_naver_client_secret
+naver.client_name=ECO

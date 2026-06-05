@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     // START: FlutterFire Configuration
@@ -7,6 +9,16 @@ plugins {
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
+
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.inputStream().use { localProperties.load(it) }
+}
+val kakaoNativeAppKey = localProperties.getProperty("kakao.native_app_key") ?: ""
+val naverClientId = localProperties.getProperty("naver.client_id") ?: ""
+val naverClientSecret = localProperties.getProperty("naver.client_secret") ?: ""
+val naverClientName = localProperties.getProperty("naver.client_name") ?: "ECO"
 
 android {
     namespace = "com.example.front"
@@ -31,6 +43,10 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        manifestPlaceholders["kakaoScheme"] = "kakao$kakaoNativeAppKey"
+        resValue("string", "naver_client_id", naverClientId)
+        resValue("string", "naver_client_secret", naverClientSecret)
+        resValue("string", "naver_client_name", naverClientName)
     }
 
     buildTypes {

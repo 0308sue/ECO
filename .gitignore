@@ -7,21 +7,27 @@
 .DS_Store
 Thumbs.db
 
+# Local secrets and generated files
+**/.env
+**/local.properties
+**/Secrets.xcconfig
+**/firebase_options.dart
+**/google-services.json
+**/GoogleService-Info.plist
+**/*firebase-adminsdk*.json
+**/service-account*.json
+
 # Flutter
-front/.dart_tool/
-front/build/
-front/.flutter-plugins
-front/.flutter-plugins-dependencies
+**/.dart_tool/
+**/build/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
 
 # Android
 **/android/local.properties
 *.apk
 *.aab
 
-# Environment / Secrets
-.env
-.env.*
-google-services.json
-GoogleService-Info.plist
-firebase-service-account.json
-serviceAccountKey.json
+# Java / Gradle
+.gradle/
+backend/build/
