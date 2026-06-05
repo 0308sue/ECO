@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:front/main.dart';
+import 'package:front/core/widgets/auth_scaffold.dart';
 
 void main() {
   testWidgets('AuthScaffold shows title and child content', (tester) async {

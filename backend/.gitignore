@@ -36,6 +36,10 @@ out/
 ### VS Code ###
 .vscode/
 
+### Firebase ###
+service-account*.json
+firebase-service-account*.json
+*.service-account.json
 
 backend/src/main/resources/firebase-service-account.json
 **/firebase-service-account.json
