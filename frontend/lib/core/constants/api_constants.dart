@@ -21,3 +21,7 @@ String get authApiBaseUrl {
 String get receiptOcrTextUrl {
   return '$authApiBaseUrl/api/receipts/ocr-text';
 }
+
+String get receiptSaveUrl {
+  return '$authApiBaseUrl/api/receipts';
+}

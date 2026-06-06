@@ -60,6 +60,10 @@
 	<string>$(NAVER_CLIENT_SECRET)</string>
 	<key>NidUrlScheme</key>
 	<string>$(NAVER_URL_SCHEME)</string>
+	<key>NSCameraUsageDescription</key>
+	<string>영수증 촬영을 위해 카메라 사용 권한이 필요합니다.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>영수증 업로드를 위해 사진 라이브러리 사용 권한이 필요합니다.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

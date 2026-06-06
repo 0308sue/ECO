@@ -7,7 +7,7 @@ import '../../utils/validators.dart';
 import '../auth/auth_gate.dart';
 import '../auth/auth_service.dart';
 import '../profile/user_profile_service.dart';
-import '../receipt/receipt_ocr_page.dart';
+import '../receipt/receipt_scan_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key, required this.user});
@@ -104,7 +104,7 @@ class _HomePageState extends State<HomePage> {
                 onPressed: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => ReceiptOcrPage(
+                      builder: (_) => ReceiptScanPage(
                         userId: widget.user.uid,
                       ),
                     ),

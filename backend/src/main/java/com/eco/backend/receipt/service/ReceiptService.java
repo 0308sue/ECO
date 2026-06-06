@@ -5,6 +5,7 @@ import com.eco.backend.item.service.ItemCategoryService;
 import com.eco.backend.receipt.dto.ReceiptAnalysisResponse;
 import com.eco.backend.receipt.dto.ReceiptItemAnalysisResponse;
 import com.eco.backend.receipt.dto.ReceiptOcrTextRequest;
+import com.eco.backend.receipt.dto.ReceiptFinalSaveRequest;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -64,8 +65,69 @@ public class ReceiptService {
 
         ReceiptAnalysisResponse.Summary summary = createSummary(analyzedItems);
 
-        String receiptId = receiptFirestoreService.saveReceiptAnalysis(
+        return new ReceiptAnalysisResponse(
+                null,
                 userId,
+                storeName,
+                purchasedAt,
+                analyzedItems,
+                summary
+        );
+    }
+
+    public ReceiptAnalysisResponse saveFinalReceipt(ReceiptFinalSaveRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("요청 값은 비어 있을 수 없습니다.");
+        }
+
+        if (request.getUserId() == null || request.getUserId().trim().isEmpty()) {
+            throw new IllegalArgumentException("userId는 비어 있을 수 없습니다.");
+        }
+
+        if (request.getItems() == null || request.getItems().isEmpty()) {
+            throw new IllegalArgumentException("저장할 품목이 없습니다.");
+        }
+
+        String storeName = request.getStoreName();
+        String purchasedAt = request.getPurchasedAt();
+
+        if ((storeName == null || storeName.isBlank())
+                && request.getOcrText() != null
+                && !request.getOcrText().isBlank()) {
+            List<String> lines = preprocessLines(request.getOcrText());
+            storeName = extractStoreName(lines);
+        }
+
+        if ((purchasedAt == null || purchasedAt.isBlank())
+                && request.getOcrText() != null
+                && !request.getOcrText().isBlank()) {
+            List<String> lines = preprocessLines(request.getOcrText());
+            purchasedAt = extractPurchasedAt(lines);
+        }
+
+        if (storeName == null || storeName.isBlank()) {
+            storeName = "상호명 미확인";
+        }
+
+        List<ReceiptItemAnalysisResponse> analyzedItems = request.getItems().stream()
+                .filter(item -> item.getName() != null && !item.getName().trim().isEmpty())
+                .filter(item -> item.getPrice() != null && item.getPrice() > 0)
+                .map(item -> analyzeLineItem(
+                        new ReceiptLineItem(
+                                item.getName().trim(),
+                                item.getPrice()
+                        )
+                ))
+                .toList();
+
+        if (analyzedItems.isEmpty()) {
+            throw new IllegalArgumentException("유효한 품목이 없습니다.");
+        }
+
+        ReceiptAnalysisResponse.Summary summary = createSummary(analyzedItems);
+
+        String receiptId = receiptFirestoreService.saveReceiptAnalysis(
+                request.getUserId(),
                 storeName,
                 purchasedAt,
                 analyzedItems,
@@ -74,7 +136,7 @@ public class ReceiptService {
 
         return new ReceiptAnalysisResponse(
                 receiptId,
-                userId,
+                request.getUserId(),
                 storeName,
                 purchasedAt,
                 analyzedItems,
@@ -491,12 +553,8 @@ public class ReceiptService {
                 continue;
             }
 
-            if (text.contains("승인금액")
-                    || text.contains("공급가")
-                    || text.contains("부가세")
-                    || text.contains("합계")
-                    || text.contains("카드")
-                    || text.contains("승인")
+            if (text.contains("승인금액") || text.contains("공급가") || text.contains("부가세")
+                    || text.contains("합계") || text.contains("카드") || text.contains("승인")
                     || text.contains("사업자")) {
                 continue;
             }
@@ -599,26 +657,13 @@ public class ReceiptService {
             return true;
         }
 
-        return normalized.contains("주소")
-                || normalized.contains("전화")
-                || normalized.contains("TEL")
-                || normalized.contains("사업자")
-                || normalized.contains("대표")
-                || normalized.contains("카드번호")
-                || normalized.contains("승인번호")
-                || normalized.contains("승인")
-                || normalized.contains("카드명")
-                || normalized.contains("매입사")
-                || normalized.contains("신용카드")
-                || normalized.contains("현금영수증")
-                || normalized.contains("영수증번호")
-                || normalized.contains("포스ID")
-                || normalized.contains("POS")
-                || normalized.contains("KIOSK")
-                || normalized.contains("테이블")
-                || normalized.contains("주문번호")
-                || normalized.contains("CASHIER")
-                || normalized.contains("캐셔");
+        return normalized.contains("주소") || normalized.contains("전화") || normalized.contains("TEL")
+                || normalized.contains("사업자") || normalized.contains("대표") || normalized.contains("카드번호")
+                || normalized.contains("승인번호") || normalized.contains("승인") || normalized.contains("카드명")
+                || normalized.contains("매입사") || normalized.contains("신용카드") || normalized.contains("현금영수증")
+                || normalized.contains("영수증번호") || normalized.contains("포스ID") || normalized.contains("POS")
+                || normalized.contains("KIOSK") || normalized.contains("테이블") || normalized.contains("주문번호")
+                || normalized.contains("CASHIER") || normalized.contains("캐셔");
     }
 
     private String extractStoreName(List<String> lines) {
@@ -794,54 +839,22 @@ public class ReceiptService {
     private boolean isIgnoredLine(String line) {
         String normalized = line.replaceAll("\\s+", "");
 
-        return normalized.contains("합계")
-                || normalized.contains("총액")
-                || normalized.contains("총금액")
-                || normalized.contains("총구매액")
-                || normalized.contains("공급가액")
-                || normalized.contains("결제")
-                || normalized.contains("카드")
-                || normalized.contains("승인")
-                || normalized.contains("부가세")
-                || normalized.contains("과세")
-                || normalized.contains("면세")
-                || normalized.contains("공급가")
-                || normalized.contains("거스름")
-                || normalized.contains("받은금액")
-                || normalized.contains("영수증")
-                || normalized.contains("사업자")
-                || normalized.contains("대표")
-                || normalized.contains("전화")
-                || normalized.contains("TEL")
-                || normalized.contains("주소")
-                || normalized.contains("일시")
-                || normalized.contains("날짜")
-                || normalized.contains("POS")
-                || normalized.contains("포스")
-                || normalized.contains("포스ID")
-                || normalized.contains("KIOSK")
-                || normalized.contains("테이블")
-                || normalized.contains("가맹점")
-                || normalized.contains("가맹점번호")
-                || normalized.contains("매출전표")
-                || normalized.contains("전표")
-                || normalized.contains("주문번호")
-                || normalized.contains("주문")
-                || normalized.contains("CASHIER")
-                || normalized.contains("캐셔")
-                || normalized.contains("캠퍼스")
-                || normalized.contains("대학교")
-                || normalized.contains("호관")
-                || normalized.contains("고객용")
-                || normalized.contains("표시상품")
-                || normalized.contains("감사합니다")
-                || normalized.contains("부가세면세")
-                || normalized.contains("발행시")
-                || normalized.contains("제품합계")
-                || normalized.contains("과세금액")
-                || normalized.contains("면세금액")
-                || normalized.contains("청구액")
-                || normalized.contains("받은돈")
+        return normalized.contains("합계") || normalized.contains("총액") || normalized.contains("총금액")
+                || normalized.contains("총구매액") || normalized.contains("공급가액") || normalized.contains("결제")
+                || normalized.contains("카드") || normalized.contains("승인") || normalized.contains("부가세")
+                || normalized.contains("과세") || normalized.contains("면세") || normalized.contains("공급가")
+                || normalized.contains("거스름") || normalized.contains("받은금액") || normalized.contains("영수증")
+                || normalized.contains("사업자") || normalized.contains("대표") || normalized.contains("전화")
+                || normalized.contains("TEL") || normalized.contains("주소") || normalized.contains("일시")
+                || normalized.contains("날짜") || normalized.contains("POS") || normalized.contains("포스")
+                || normalized.contains("포스ID") || normalized.contains("KIOSK") || normalized.contains("테이블")
+                || normalized.contains("가맹점") || normalized.contains("가맹점번호") || normalized.contains("매출전표")
+                || normalized.contains("전표") || normalized.contains("주문번호") || normalized.contains("주문")
+                || normalized.contains("CASHIER") || normalized.contains("캐셔") || normalized.contains("캠퍼스")
+                || normalized.contains("대학교") || normalized.contains("호관") || normalized.contains("고객용")
+                || normalized.contains("표시상품") || normalized.contains("감사합니다") || normalized.contains("부가세면세")
+                || normalized.contains("발행시") || normalized.contains("제품합계") || normalized.contains("과세금액")
+                || normalized.contains("면세금액") || normalized.contains("청구액") || normalized.contains("받은돈")
                 || normalized.contains("비씨카드")
                 || normalized.matches(".*\\d{2,3}-\\d{3,4}-\\d{4}.*")
                 || normalized.matches(".*\\d{4}-\\d{4}-\\d{4}-\\d{4}.*")
@@ -869,17 +882,10 @@ public class ReceiptService {
     private boolean isItemSectionEnd(String line) {
         String normalized = line.replaceAll("\\s+", "");
 
-        return normalized.contains("주문금액")
-                || normalized.contains("합계")
-                || normalized.contains("공급가")
-                || normalized.contains("부가세")
-                || normalized.contains("결제")
-                || normalized.contains("신용카드")
-                || normalized.contains("카드")
-                || normalized.contains("승인")
-                || normalized.contains("받은금액")
-                || normalized.contains("거스름")
-                || normalized.contains("제품합계");
+        return normalized.contains("주문금액") || normalized.contains("합계") || normalized.contains("공급가")
+                || normalized.contains("부가세") || normalized.contains("결제") || normalized.contains("신용카드")
+                || normalized.contains("카드") || normalized.contains("승인") || normalized.contains("받은금액")
+                || normalized.contains("거스름") || normalized.contains("제품합계");
     }
 
     private boolean isInvalidItemName(String line) {
@@ -927,48 +933,20 @@ public class ReceiptService {
             return true;
         }
 
-        return normalized.contains("품명")
-                || normalized.contains("상품명")
-                || normalized.contains("메뉴명")
-                || normalized.contains("품목")
-                || normalized.contains("단가")
-                || normalized.contains("수량")
-                || normalized.contains("금액")
-                || normalized.contains("제품합계")
-                || normalized.contains("합계")
-                || normalized.contains("주문")
-                || normalized.contains("주문번호")
-                || normalized.contains("포스ID")
-                || normalized.contains("KIOSK")
-                || normalized.contains("영수증")
-                || normalized.contains("테이블")
-                || normalized.contains("부가세")
-                || normalized.contains("공급가액")
-                || normalized.contains("신용카드")
-                || normalized.contains("매출전표")
-                || normalized.contains("과세금액")
-                || normalized.contains("면세금액")
-                || normalized.contains("청구액")
-                || normalized.contains("청구")
-                || normalized.contains("받은돈")
-                || normalized.contains("비씨카드")
-                || normalized.contains("가맹점번호")
-                || normalized.contains("카드번호")
-                || normalized.contains("카드명")
-                || normalized.contains("매입사")
-                || normalized.contains("승인번호")
-                || normalized.contains("CASHIER")
-                || normalized.contains("캐셔")
-                || normalized.contains("감사합니다")
-                || normalized.contains("고객용")
-                || normalized.contains("프린트")
-                || normalized.contains("캠퍼스")
-                || normalized.contains("대학교")
-                || normalized.contains("호관")
-                || normalized.contains("표시상품")
-                || normalized.contains("부가세면세")
-                || normalized.contains("발행시")
-                || normalized.contains("할부")
+        return normalized.contains("품명") || normalized.contains("상품명") || normalized.contains("메뉴명")
+                || normalized.contains("품목") || normalized.contains("단가") || normalized.contains("수량") 
+                || normalized.contains("금액") || normalized.contains("제품합계") || normalized.contains("합계")
+                || normalized.contains("주문") || normalized.contains("주문번호") || normalized.contains("포스ID")
+                || normalized.contains("KIOSK") || normalized.contains("영수증") || normalized.contains("테이블")
+                || normalized.contains("부가세") || normalized.contains("공급가액") || normalized.contains("신용카드")
+                || normalized.contains("매출전표") || normalized.contains("과세금액") || normalized.contains("면세금액")
+                || normalized.contains("청구액") || normalized.contains("청구") || normalized.contains("받은돈")
+                || normalized.contains("비씨카드") || normalized.contains("가맹점번호") || normalized.contains("카드번호")
+                || normalized.contains("카드명") || normalized.contains("매입사") || normalized.contains("승인번호")
+                || normalized.contains("CASHIER") || normalized.contains("캐셔") || normalized.contains("감사합니다")
+                || normalized.contains("고객용") || normalized.contains("프린트") || normalized.contains("캠퍼스")
+                || normalized.contains("대학교") || normalized.contains("호관") || normalized.contains("표시상품")
+                || normalized.contains("부가세면세") || normalized.contains("발행시") || normalized.contains("할부")
                 || normalized.contains("할인");
     }
 
@@ -1013,51 +991,21 @@ public class ReceiptService {
             return false;
         }
 
-        return !(normalized.contains("고객용")
-                || normalized.contains("승인")
-                || normalized.contains("승인금액")
-                || normalized.contains("승인번호")
-                || normalized.contains("결제")
-                || normalized.contains("결제금액")
-                || normalized.contains("카드")
-                || normalized.contains("카드번호")
-                || normalized.contains("카드명")
-                || normalized.contains("매입사")
-                || normalized.contains("가맹")
-                || normalized.contains("가맹번호")
-                || normalized.contains("가맹점번호")
-                || normalized.contains("합계")
-                || normalized.contains("총액")
-                || normalized.contains("총금액")
-                || normalized.contains("공급가")
-                || normalized.contains("공급가액")
-                || normalized.contains("부가세")
-                || normalized.contains("과세")
-                || normalized.contains("면세")
-                || normalized.contains("면세금액")
-                || normalized.contains("청구액")
-                || normalized.contains("청구")
-                || normalized.contains("받은돈")
-                || normalized.contains("비씨카드")
-                || normalized.contains("거스름")
-                || normalized.contains("받은금액")
-                || normalized.contains("영수증")
-                || normalized.contains("사업자")
-                || normalized.contains("대표")
-                || normalized.contains("전화")
-                || normalized.contains("주소")
-                || normalized.contains("POS")
-                || normalized.contains("포스")
-                || normalized.contains("KIOSK")
-                || normalized.contains("테이블")
-                || normalized.contains("주문번호")
-                || normalized.contains("CASHIER")
-                || normalized.contains("캐셔")
-                || normalized.contains("감사합니다")
-                || normalized.contains("표시상품")
-                || normalized.contains("발행시")
-                || normalized.contains("할부")
-                || normalized.contains("할인"));
+        return !(normalized.contains("고객용") || normalized.contains("승인") || normalized.contains("승인금액")
+                || normalized.contains("승인번호") || normalized.contains("결제") || normalized.contains("결제금액")
+                || normalized.contains("카드") || normalized.contains("카드번호") || normalized.contains("카드명")
+                || normalized.contains("매입사") || normalized.contains("가맹") || normalized.contains("가맹번호")
+                || normalized.contains("가맹점번호") || normalized.contains("합계") || normalized.contains("총액")
+                || normalized.contains("총금액") || normalized.contains("공급가") || normalized.contains("공급가액")
+                || normalized.contains("부가세") || normalized.contains("과세") || normalized.contains("면세")
+                || normalized.contains("면세금액") || normalized.contains("청구액") || normalized.contains("청구")
+                || normalized.contains("받은돈") || normalized.contains("비씨카드") || normalized.contains("거스름")
+                || normalized.contains("받은금액") || normalized.contains("영수증") || normalized.contains("사업자")
+                || normalized.contains("대표") || normalized.contains("전화") || normalized.contains("주소")
+                || normalized.contains("POS") || normalized.contains("포스") || normalized.contains("KIOSK")
+                || normalized.contains("테이블") || normalized.contains("주문번호") || normalized.contains("CASHIER")
+                || normalized.contains("캐셔") || normalized.contains("감사합니다") || normalized.contains("표시상품")
+                || normalized.contains("발행시") || normalized.contains("할부") || normalized.contains("할인"));
     }
 
     private boolean isOptionItemLine(String itemName) {
