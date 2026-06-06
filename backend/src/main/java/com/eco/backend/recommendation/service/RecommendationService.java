@@ -1,9 +1,12 @@
 package com.eco.backend.recommendation.service;
 
+import com.eco.backend.recommendation.domain.EcoItem;
+import com.eco.backend.recommendation.domain.EcoPlace;
 import com.eco.backend.recommendation.dto.RecommendationRequest;
 import com.eco.backend.recommendation.dto.RecommendedItemResponse;
 import com.eco.backend.recommendation.dto.RecommendedPlaceResponse;
 import com.eco.backend.recommendation.dto.ReceiptItem;
+import com.eco.backend.recommendation.repository.EcoRecommendationRepository;
 import com.eco.backend.recommendation.rule.RecommendationRule;
 import org.springframework.stereotype.Service;
 
@@ -13,8 +16,12 @@ import java.util.List;
 @Service
 public class RecommendationService {
 
-    // 현재는 DB 없이 코드 안에서 추천 규칙을 관리함
-    // 나중에 Firebase/DB를 붙이면 eco_items, eco_places만 DB에서 조회하는 방향으로 확장
+    private final EcoRecommendationRepository ecoRecommendationRepository;
+
+    public RecommendationService(EcoRecommendationRepository ecoRecommendationRepository) {
+        this.ecoRecommendationRepository = ecoRecommendationRepository;
+    }
+
     private final List<RecommendationRule> rules = List.of(
             new RecommendationRule(
                     "음료",
@@ -73,21 +80,14 @@ public class RecommendationService {
             return responses;
         }
 
-        for (ReceiptItem item : request.items()) {
-            String matchName = getMatchName(item);
-            String category = item.category();
-            String subCategory = item.subCategory();
+        for (ReceiptItem receiptItem : request.items()) {
+            String matchName = getMatchName(receiptItem);
+            String category = receiptItem.category();
+            String subCategory = receiptItem.subCategory();
 
             for (RecommendationRule rule : rules) {
                 if (rule.matches(matchName, category, subCategory)) {
-                    responses.add(new RecommendedItemResponse(
-                            item.originalName(),
-                            matchName,
-                            rule.recommendedItem(),
-                            rule.reason()
-                    ));
-
-                    // 한 품목에 대해 첫 번째로 매칭된 추천만 반환
+                    addRecommendedItemFromDb(responses, receiptItem, matchName, rule);
                     break;
                 }
             }
@@ -103,63 +103,67 @@ public class RecommendationService {
             return responses;
         }
 
-        boolean needZeroWasteShop = false;
-        boolean needRefillStation = false;
-        boolean needBatteryBox = false;
+        List<String> requiredPlaceTypes = new ArrayList<>();
 
-        for (ReceiptItem item : request.items()) {
-            String matchName = getMatchName(item);
-            String category = item.category();
-            String subCategory = item.subCategory();
+        for (ReceiptItem receiptItem : request.items()) {
+            String matchName = getMatchName(receiptItem);
+            String category = receiptItem.category();
+            String subCategory = receiptItem.subCategory();
 
             for (RecommendationRule rule : rules) {
                 if (rule.matches(matchName, category, subCategory)) {
-                    switch (rule.placeType()) {
-                        case "제로웨이스트샵" -> needZeroWasteShop = true;
-                        case "리필스테이션" -> needRefillStation = true;
-                        case "폐건전지수거함" -> needBatteryBox = true;
-                        default -> {
-                            // 아직 장소 추천 규칙이 없는 경우 제외
-                        }
+                    if (!requiredPlaceTypes.contains(rule.placeType())) {
+                        requiredPlaceTypes.add(rule.placeType());
                     }
+                    break;
                 }
             }
         }
 
-        if (needZeroWasteShop) {
-            responses.add(new RecommendedPlaceResponse(
-                    "예시 제로웨이스트샵",
-                    "제로웨이스트샵",
-                    "부산광역시 부산진구",
-                    35.157,
-                    129.059,
-                    "친환경 생활용품과 대체 아이템을 구매할 수 있습니다."
-            ));
-        }
+        for (String placeType : requiredPlaceTypes) {
+            try {
+                List<EcoPlace> places = ecoRecommendationRepository.findActivePlacesByType(placeType);
 
-        if (needRefillStation) {
-            responses.add(new RecommendedPlaceResponse(
-                    "예시 리필스테이션",
-                    "리필스테이션",
-                    "부산광역시 부산진구",
-                    35.158,
-                    129.061,
-                    "세탁세제 리필이 가능한 장소입니다."
-            ));
-        }
-
-        if (needBatteryBox) {
-            responses.add(new RecommendedPlaceResponse(
-                    "예시 폐건전지 수거함",
-                    "폐건전지수거함",
-                    "부산광역시 부산진구",
-                    35.156,
-                    129.058,
-                    "건전지는 일반쓰레기가 아닌 전용 수거함에 배출하는 것이 좋습니다."
-            ));
+                for (EcoPlace place : places) {
+                    responses.add(new RecommendedPlaceResponse(
+                            place.getName(),
+                            place.getType(),
+                            place.getAddress(),
+                            place.getLat(),
+                            place.getLng(),
+                            place.getDescription()
+                    ));
+                }
+            } catch (Exception e) {
+                throw new RuntimeException("추천 장소 조회 중 오류가 발생했습니다.", e);
+            }
         }
 
         return responses;
+    }
+
+    private void addRecommendedItemFromDb(
+            List<RecommendedItemResponse> responses,
+            ReceiptItem receiptItem,
+            String matchName,
+            RecommendationRule rule
+    ) {
+        try {
+            List<EcoItem> ecoItems =
+                    ecoRecommendationRepository.findActiveEcoItemsByName(rule.recommendedItem());
+
+
+            for (EcoItem ecoItem : ecoItems) {
+                responses.add(new RecommendedItemResponse(
+                        receiptItem.originalName(),
+                        matchName,
+                        ecoItem.getName(),
+                        ecoItem.getReason()
+                ));
+            }
+        } catch (Exception e) {
+        throw new RuntimeException("추천 아이템 조회 중 오류가 발생했습니다.", e);
+    }
     }
 
     private String getMatchName(ReceiptItem item) {
