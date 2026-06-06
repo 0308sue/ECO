@@ -24,6 +24,8 @@ public class ReceiptFirestoreService {
 
     public String saveReceiptAnalysis(
             String userId,
+            String storeName,
+            String purchasedAt,
             List<ReceiptItemAnalysisResponse> items,
             ReceiptAnalysisResponse.Summary summary
     ) {
@@ -38,6 +40,8 @@ public class ReceiptFirestoreService {
         Map<String, Object> receiptData = new LinkedHashMap<>();
         receiptData.put("receiptId", receiptId);
         receiptData.put("userId", userId);
+        receiptData.put("storeName", storeName);
+        receiptData.put("purchasedAt", purchasedAt);
         receiptData.put("items", convertItemsToMap(items));
         receiptData.put("summary", convertSummaryToMap(summary));
         receiptData.put("createdAt", FieldValue.serverTimestamp());

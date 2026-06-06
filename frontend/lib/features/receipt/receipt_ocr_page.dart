@@ -25,6 +25,7 @@ class _ReceiptOcrPageState extends State<ReceiptOcrPage> {
 
   File? _selectedImage;
   String _ocrText = '';
+  List<Map<String, dynamic>> _ocrLines = [];
   Map<String, dynamic>? _analysisResult;
 
   bool _isRecognizing = false;
@@ -40,6 +41,7 @@ class _ReceiptOcrPageState extends State<ReceiptOcrPage> {
     setState(() {
       _selectedImage = File(image.path);
       _ocrText = '';
+      _ocrLines = [];
       _analysisResult = null;
     });
   }
@@ -64,8 +66,34 @@ class _ReceiptOcrPageState extends State<ReceiptOcrPage> {
       final inputImage = InputImage.fromFilePath(_selectedImage!.path);
       final recognizedText = await textRecognizer.processImage(inputImage);
 
+      final extractedLines = <Map<String, dynamic>>[];
+
+      for (final block in recognizedText.blocks) {
+        for (final line in block.lines) {
+          final box = line.boundingBox;
+
+          extractedLines.add({
+            'text': line.text,
+            'x': box.left,
+            'y': box.top,
+            'width': box.width,
+            'height': box.height,
+          });
+        }
+      }
+
+      extractedLines.sort((a, b) {
+        final yCompare = (a['y'] as num).compareTo(b['y'] as num);
+        if (yCompare != 0) {
+          return yCompare;
+        }
+
+        return (a['x'] as num).compareTo(b['x'] as num);
+      });
+
       setState(() {
         _ocrText = recognizedText.text;
+        _ocrLines = extractedLines;
       });
 
       if (_ocrText.trim().isEmpty) {
@@ -104,6 +132,7 @@ class _ReceiptOcrPageState extends State<ReceiptOcrPage> {
         body: jsonEncode({
           'userId': widget.userId,
           'ocrText': _ocrText,
+          'ocrLines': _ocrLines,
         }),
       );
 
@@ -243,7 +272,10 @@ class _ReceiptOcrPageState extends State<ReceiptOcrPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('OCR 텍스트', style: TextStyle(fontWeight: FontWeight.bold)),
+            Text(
+            'OCR 텍스트 / 라인 ${_ocrLines.length}개',
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
             const SizedBox(height: 8),
             SelectableText(
               _ocrText.isEmpty ? '아직 추출된 텍스트가 없습니다.' : _ocrText,

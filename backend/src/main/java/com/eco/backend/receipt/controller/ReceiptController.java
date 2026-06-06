@@ -23,7 +23,8 @@ public class ReceiptController {
         ReceiptAnalysisResponse response =
                 receiptService.analyzeOcrText(
                         request.getUserId(),
-                        request.getOcrText()
+                        request.getOcrText(),
+                        request.getOcrLines()
                 );
 
         return ResponseEntity.ok(response);

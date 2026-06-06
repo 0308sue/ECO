@@ -6,6 +6,8 @@ public class ReceiptAnalysisResponse {
 
     private String receiptId;
     private String userId;
+    private String storeName;
+    private String purchasedAt;
     private List<ReceiptItemAnalysisResponse> items;
     private Summary summary;
 
@@ -15,11 +17,15 @@ public class ReceiptAnalysisResponse {
     public ReceiptAnalysisResponse(
             String receiptId,
             String userId,
+            String storeName,
+            String purchasedAt,
             List<ReceiptItemAnalysisResponse> items,
             Summary summary
     ) {
         this.receiptId = receiptId;
         this.userId = userId;
+        this.storeName = storeName;
+        this.purchasedAt = purchasedAt;
         this.items = items;
         this.summary = summary;
     }
@@ -30,6 +36,14 @@ public class ReceiptAnalysisResponse {
 
     public String getUserId() {
         return userId;
+    }
+
+    public String getStoreName() {
+        return storeName;
+    }
+
+    public String getPurchasedAt() {
+        return purchasedAt;
     }
 
     public List<ReceiptItemAnalysisResponse> getItems() {
