@@ -1,0 +1,46 @@
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local secrets and generated files
+**/.env
+**/local.properties
+**/Secrets.xcconfig
+**/firebase_options.dart
+**/google-services.json
+**/GoogleService-Info.plist
+**/*firebase-adminsdk*.json
+**/service-account*.json
+
+# Flutter
+**/.dart_tool/
+**/build/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+
+# Android
+**/android/local.properties
+*.apk
+*.aab
+
+# Java / Gradle
+.gradle/
+backend/build/
+
+firebase-service-account.json
+serviceAccountKey.json
+*.firebase-adminsdk.json
+
+
+frontend/lib/firebase_options.dart
+frontend/android/app/google-services.json
+frontend/android/local.properties
+frontend/ios/Runner/GoogleService-Info.plist
+frontend/ios/Flutter/Secrets.xcconfig
+backend/src/main/resources/firebase-service-account.json
+backend/src/main/resources/data/*.csv
