@@ -7,6 +7,7 @@ import '../../utils/validators.dart';
 import '../auth/auth_gate.dart';
 import '../auth/auth_service.dart';
 import '../profile/user_profile_service.dart';
+import '../../ranking/screen/ranking_page.dart';
 import '../receipt/receipt_scan_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -33,8 +34,9 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final userDoc =
-        FirebaseFirestore.instance.collection('users').doc(widget.user.uid);
+    final userDoc = FirebaseFirestore.instance
+        .collection('users')
+        .doc(widget.user.uid);
 
     return Scaffold(
       appBar: AppBar(
@@ -52,10 +54,7 @@ class _HomePageState extends State<HomePage> {
               }
             },
             itemBuilder: (context) => const [
-              PopupMenuItem(
-                value: 'delete_account',
-                child: Text('회원 탈퇴'),
-              ),
+              PopupMenuItem(value: 'delete_account', child: Text('회원 탈퇴')),
             ],
           ),
         ],
@@ -104,9 +103,20 @@ class _HomePageState extends State<HomePage> {
                 onPressed: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => ReceiptScanPage(
-                        userId: widget.user.uid,
-                      ),
+                      builder: (_) =>
+                          RankingPage(currentUserId: widget.user.uid),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.leaderboard),
+                label: const Text('랭킹 보기'),
+              ),
+              const SizedBox(height: 8),
+              FilledButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => ReceiptScanPage(userId: widget.user.uid),
                     ),
                   );
                 },
@@ -191,9 +201,7 @@ class _HomePageState extends State<HomePage> {
         SnackBar(content: Text('회원 탈퇴에 실패했습니다. ${authErrorMessage(error)}')),
       );
     } catch (error) {
-      messenger.showSnackBar(
-        SnackBar(content: Text('회원 탈퇴에 실패했습니다. $error')),
-      );
+      messenger.showSnackBar(SnackBar(content: Text('회원 탈퇴에 실패했습니다. $error')));
     }
   }
 }

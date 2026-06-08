@@ -5,7 +5,6 @@ import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart' as kakao;
 import 'app.dart';
 import 'core/constants/api_constants.dart';
 import 'firebase_options.dart';
-import 'ranking/screen/ranking_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

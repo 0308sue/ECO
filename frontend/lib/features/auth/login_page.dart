@@ -1,7 +1,9 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_naver_login/flutter_naver_login.dart';
 import 'package:flutter_naver_login/interface/types/naver_login_status.dart';
 import 'package:http/http.dart' as http;
@@ -10,6 +12,8 @@ import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart' as kakao;
 import '../../core/constants/api_constants.dart';
 import '../../core/widgets/auth_scaffold.dart';
 import '../profile/user_profile_service.dart';
+
+const MethodChannel nativeConfigChannel = MethodChannel('eco/native_config');
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -83,6 +87,25 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
+      final naverConfigDebug = await _readNaverConfigDebug();
+      if (naverConfigDebug != null) {
+        debugPrint('NAVER_CONFIG_DEBUG: $naverConfigDebug');
+        final clientIdLength = naverConfigDebug['clientIdLength'] as int? ?? 0;
+        final hasClientSecret =
+            naverConfigDebug['hasClientSecret'] as bool? ?? false;
+        final looksLikeExample =
+            naverConfigDebug['looksLikeExample'] as bool? ?? false;
+
+        if (clientIdLength == 0 || !hasClientSecret || looksLikeExample) {
+          throw Exception(
+            '네이버 설정값이 앱에 제대로 들어가지 않았습니다. '
+            'package=${naverConfigDebug['packageName']}, '
+            'clientId=${naverConfigDebug['clientIdPreview']}, '
+            'name=${naverConfigDebug['clientName']}',
+          );
+        }
+      }
+
       final loginResult = await FlutterNaverLogin.logIn();
 
       if (loginResult.status != NaverLoginStatus.loggedIn) {
@@ -126,6 +149,20 @@ class _LoginPageState extends State<LoginPage> {
         });
       }
     }
+  }
+
+  Future<Map<String, dynamic>?> _readNaverConfigDebug() async {
+    if (!Platform.isAndroid) {
+      return null;
+    }
+
+    final raw = await nativeConfigChannel.invokeMethod<Map<dynamic, dynamic>>(
+      'getNaverConfigDebug',
+    );
+    if (raw == null) {
+      return null;
+    }
+    return Map<String, dynamic>.from(raw);
   }
 
   Future<kakao.OAuthToken> _requestKakaoToken() async {
