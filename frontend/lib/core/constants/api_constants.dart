@@ -25,3 +25,13 @@ String get receiptOcrTextUrl {
 String get receiptSaveUrl {
   return '$authApiBaseUrl/api/receipts';
 }
+
+
+
+String get recommendationItemsUrl {
+  return '$authApiBaseUrl/api/recommendations/items';
+}
+
+String get recommendationPlacesUrl {
+  return '$authApiBaseUrl/api/recommendations/places';
+}

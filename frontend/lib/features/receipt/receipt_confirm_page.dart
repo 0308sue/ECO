@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 import '../../core/constants/api_constants.dart';
+import '../recommendation/recommendation_result_page.dart';
 
 class ReceiptConfirmPage extends StatefulWidget {
   const ReceiptConfirmPage({
@@ -148,6 +149,24 @@ class _ReceiptConfirmPageState extends State<ReceiptConfirmPage> {
     return summary is Map<String, dynamic> ? summary : null;
   }
 
+  void _openRecommendationResult() {
+    final savedResult = _savedResult;
+
+    if (savedResult == null) {
+      _showMessage('저장된 영수증 정보가 없습니다.');
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => RecommendationResultPage(
+          savedResult: savedResult,
+        ),
+      ),
+    );
+  }
+
   void _showMessage(String message) {
     if (!mounted) {
       return;
@@ -182,6 +201,12 @@ class _ReceiptConfirmPageState extends State<ReceiptConfirmPage> {
               _buildReceiptIdCard(),
               const SizedBox(height: 12),
               if (summary != null) _buildSummaryCard(summary),
+              const SizedBox(height: 12),
+              FilledButton.icon(
+                onPressed: _openRecommendationResult,
+                icon: const Icon(Icons.eco_outlined),
+                label: const Text('추천 결과 보기'),
+              ),
             ],
           ],
         ),

@@ -4,6 +4,9 @@ public record RecommendedItemResponse(
         String originalItem,
         String normalizedItem,
         String recommendedItem,
-        String reason
+        String reason,
+        String companyName,
+        String certificationNo,
+        String sourceName
 ) {
 }
