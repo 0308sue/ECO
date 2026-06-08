@@ -82,7 +82,7 @@ public class NaverAuthService {
         UserRecord.UpdateRequest updateRequest = new UserRecord.UpdateRequest(uid)
                 .setDisplayName(naverUser.nickname());
 
-        if (naverUser.email() != null && !naverUser.email().isBlank()) {
+        if (canUseEmail(uid, naverUser.email())) {
             updateRequest.setEmail(naverUser.email());
         }
 
@@ -97,11 +97,27 @@ public class NaverAuthService {
                     .setUid(uid)
                     .setDisplayName(naverUser.nickname());
 
-            if (naverUser.email() != null && !naverUser.email().isBlank()) {
+            if (canUseEmail(uid, naverUser.email())) {
                 createRequest.setEmail(naverUser.email());
             }
 
             FirebaseAuth.getInstance().createUser(createRequest);
+        }
+    }
+
+    private boolean canUseEmail(String uid, String email) throws FirebaseAuthException {
+        if (email == null || email.isBlank()) {
+            return false;
+        }
+
+        try {
+            UserRecord user = FirebaseAuth.getInstance().getUserByEmail(email);
+            return uid.equals(user.getUid());
+        } catch (FirebaseAuthException error) {
+            if (error.getAuthErrorCode() == AuthErrorCode.USER_NOT_FOUND) {
+                return true;
+            }
+            throw error;
         }
     }
 }

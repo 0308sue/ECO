@@ -5,17 +5,20 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_naver_login/flutter_naver_login.dart';
 import 'package:flutter_naver_login/interface/types/naver_login_status.dart';
 import 'package:http/http.dart' as http;
 import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart' as kakao;
 
 import 'firebase_options.dart';
+import 'ranking/screen/ranking_page.dart';
 
 const String kakaoNativeAppKey = String.fromEnvironment('KAKAO_NATIVE_APP_KEY');
 const String configuredAuthApiBaseUrl = String.fromEnvironment(
   'AUTH_API_BASE_URL',
 );
+const MethodChannel nativeConfigChannel = MethodChannel('eco/native_config');
 
 String get authApiBaseUrl {
   if (configuredAuthApiBaseUrl.isNotEmpty) {
@@ -121,7 +124,7 @@ class _LoginPageState extends State<LoginPage> {
       );
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw Exception('카카오 로그인 서버 요청에 실패했습니다.');
+        throw Exception(_loginServerErrorMessage(response, '카카오'));
       }
 
       final body = jsonDecode(response.body) as Map<String, dynamic>;
@@ -130,8 +133,9 @@ class _LoginPageState extends State<LoginPage> {
         throw Exception('Firebase 로그인 토큰을 받지 못했습니다.');
       }
 
-      final credential =
-          await FirebaseAuth.instance.signInWithCustomToken(customToken);
+      final credential = await FirebaseAuth.instance.signInWithCustomToken(
+        customToken,
+      );
       final user = credential.user;
       if (user != null) {
         await _ensureUserProfile(user);
@@ -156,12 +160,35 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
+      final naverConfigDebug = await _readNaverConfigDebug();
+      if (naverConfigDebug != null) {
+        debugPrint('NAVER_CONFIG_DEBUG: $naverConfigDebug');
+        final clientIdLength = naverConfigDebug['clientIdLength'] as int? ?? 0;
+        final hasClientSecret =
+            naverConfigDebug['hasClientSecret'] as bool? ?? false;
+        final looksLikeExample =
+            naverConfigDebug['looksLikeExample'] as bool? ?? false;
+
+        if (clientIdLength == 0 || !hasClientSecret || looksLikeExample) {
+          throw Exception(
+            '네이버 설정값이 앱에 제대로 들어가지 않았습니다. '
+            'package=${naverConfigDebug['packageName']}, '
+            'clientId=${naverConfigDebug['clientIdPreview']}, '
+            'name=${naverConfigDebug['clientName']}',
+          );
+        }
+      }
+
       final loginResult = await FlutterNaverLogin.logIn();
       if (loginResult.status != NaverLoginStatus.loggedIn) {
         throw Exception('네이버 로그인이 취소되었거나 실패했습니다.');
       }
 
       final token = await FlutterNaverLogin.getCurrentAccessToken();
+      if (token.accessToken.isEmpty) {
+        throw Exception('네이버 로그인 토큰을 받지 못했습니다.');
+      }
+
       final response = await http.post(
         Uri.parse('$authApiBaseUrl/api/auth/naver'),
         headers: {'Content-Type': 'application/json'},
@@ -169,7 +196,7 @@ class _LoginPageState extends State<LoginPage> {
       );
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw Exception('네이버 로그인 서버 요청에 실패했습니다.');
+        throw Exception(_loginServerErrorMessage(response, '네이버'));
       }
 
       final body = jsonDecode(response.body) as Map<String, dynamic>;
@@ -178,8 +205,9 @@ class _LoginPageState extends State<LoginPage> {
         throw Exception('Firebase 로그인 토큰을 받지 못했습니다.');
       }
 
-      final credential =
-          await FirebaseAuth.instance.signInWithCustomToken(customToken);
+      final credential = await FirebaseAuth.instance.signInWithCustomToken(
+        customToken,
+      );
       final user = credential.user;
       if (user != null) {
         await _ensureUserProfile(user);
@@ -195,6 +223,38 @@ class _LoginPageState extends State<LoginPage> {
         });
       }
     }
+  }
+
+  Future<Map<String, dynamic>?> _readNaverConfigDebug() async {
+    if (!Platform.isAndroid) {
+      return null;
+    }
+
+    final raw = await nativeConfigChannel.invokeMethod<Map<dynamic, dynamic>>(
+      'getNaverConfigDebug',
+    );
+    if (raw == null) {
+      return null;
+    }
+    return Map<String, dynamic>.from(raw);
+  }
+
+  String _loginServerErrorMessage(http.Response response, String providerName) {
+    final fallback =
+        '$providerName 로그인 서버 요청에 실패했습니다. '
+        '상태 코드: ${response.statusCode}';
+
+    try {
+      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      final message = body['message'] as String?;
+      if (message != null && message.isNotEmpty) {
+        return '$providerName 로그인 서버 요청에 실패했습니다. $message';
+      }
+    } catch (_) {
+      // Keep the fallback when the server did not return JSON.
+    }
+
+    return fallback;
   }
 
   Future<kakao.OAuthToken> _requestKakaoToken() async {
@@ -265,7 +325,8 @@ class UserProfileGate extends StatelessWidget {
 
         final data = snapshot.data?.data();
         final nickname = (data?['nickname'] as String?)?.trim() ?? '';
-        final needsNickname = !snapshot.hasData ||
+        final needsNickname =
+            !snapshot.hasData ||
             !snapshot.data!.exists ||
             nickname.isEmpty ||
             nickname == '사용자' ||
@@ -321,22 +382,20 @@ class _NicknameSetupPageState extends State<NicknameSetupPage> {
           .collection('users')
           .doc(widget.user.uid)
           .set({
-        'email': widget.user.email,
-        'nickname': nickname,
-        'ecoPoint': 0,
-        'grade': 'Seed',
-        'badges': <String>[],
-        'loginProvider': _loginProviderOf(widget.user),
-        'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+            'email': widget.user.email,
+            'nickname': nickname,
+            'ecoPoint': 0,
+            'grade': 'Seed',
+            'badges': <String>[],
+            'loginProvider': _loginProviderOf(widget.user),
+            'createdAt': FieldValue.serverTimestamp(),
+            'updatedAt': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
 
       if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (_) => const AuthGate(),
-          ),
-        );
+        Navigator.of(
+          context,
+        ).pushReplacement(MaterialPageRoute(builder: (_) => const AuthGate()));
       }
     } catch (error) {
       setState(() {
@@ -407,8 +466,9 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final userDoc =
-        FirebaseFirestore.instance.collection('users').doc(widget.user.uid);
+    final userDoc = FirebaseFirestore.instance
+        .collection('users')
+        .doc(widget.user.uid);
 
     return Scaffold(
       appBar: AppBar(
@@ -426,10 +486,7 @@ class _HomePageState extends State<HomePage> {
               }
             },
             itemBuilder: (context) => const [
-              PopupMenuItem(
-                value: 'delete_account',
-                child: Text('회원 탈퇴'),
-              ),
+              PopupMenuItem(value: 'delete_account', child: Text('회원 탈퇴')),
             ],
           ),
         ],
@@ -472,6 +529,19 @@ class _HomePageState extends State<HomePage> {
                 title: '획득 배지',
                 value: badges.isEmpty ? '아직 획득한 배지가 없습니다.' : badges.join(', '),
                 icon: Icons.military_tech,
+              ),
+              const SizedBox(height: 12),
+              FilledButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          RankingPage(currentUserId: widget.user.uid),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.leaderboard),
+                label: const Text('랭킹 보기'),
               ),
             ],
           );
@@ -534,10 +604,7 @@ Future<void> _deleteAccount(BuildContext context, User user) async {
   final provider = _loginProviderOf(user);
 
   try {
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .delete();
+    await FirebaseFirestore.instance.collection('users').doc(user.uid).delete();
     await user.delete();
     if (context.mounted) {
       Navigator.of(context).pushAndRemoveUntil(
@@ -551,6 +618,9 @@ Future<void> _deleteAccount(BuildContext context, User user) async {
       messenger.showSnackBar(
         const SnackBar(content: Text('보안을 위해 다시 로그인한 뒤 탈퇴해주세요.')),
       );
+      if (!context.mounted) {
+        return;
+      }
       await _signOut(context);
       return;
     }
@@ -559,9 +629,7 @@ Future<void> _deleteAccount(BuildContext context, User user) async {
       SnackBar(content: Text('회원 탈퇴에 실패했습니다. ${_authErrorMessage(error)}')),
     );
   } catch (error) {
-    messenger.showSnackBar(
-      SnackBar(content: Text('회원 탈퇴에 실패했습니다. $error')),
-    );
+    messenger.showSnackBar(SnackBar(content: Text('회원 탈퇴에 실패했습니다. $error')));
   }
 }
 
@@ -599,9 +667,7 @@ Future<DocumentSnapshot<Map<String, dynamic>>> _ensureUserProfile(
 Future<void> _clearSocialSession(String provider) async {
   try {
     if (provider == 'kakao') {
-      await kakao.UserApi.instance
-          .logout()
-          .timeout(const Duration(seconds: 3));
+      await kakao.UserApi.instance.logout().timeout(const Duration(seconds: 3));
     } else if (provider == 'naver') {
       await FlutterNaverLogin.logOut().timeout(const Duration(seconds: 3));
     }
@@ -614,9 +680,9 @@ Future<void> _unlinkSocialLogin(String provider) async {
       await kakao.UserApi.instance.unlink().timeout(const Duration(seconds: 5));
     } catch (_) {
       try {
-        await kakao.UserApi.instance
-            .logout()
-            .timeout(const Duration(seconds: 3));
+        await kakao.UserApi.instance.logout().timeout(
+          const Duration(seconds: 3),
+        );
       } catch (_) {}
     }
     return;
@@ -624,8 +690,9 @@ Future<void> _unlinkSocialLogin(String provider) async {
 
   if (provider == 'naver') {
     try {
-      await FlutterNaverLogin.logOutAndDeleteToken()
-          .timeout(const Duration(seconds: 5));
+      await FlutterNaverLogin.logOutAndDeleteToken().timeout(
+        const Duration(seconds: 5),
+      );
     } catch (_) {
       try {
         await FlutterNaverLogin.logOut().timeout(const Duration(seconds: 3));
