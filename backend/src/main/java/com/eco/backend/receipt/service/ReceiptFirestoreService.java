@@ -5,8 +5,6 @@ import com.eco.backend.receipt.dto.ReceiptItemAnalysisResponse;
 import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.FieldValue;
 import com.google.cloud.firestore.Firestore;
-import com.google.cloud.firestore.SetOptions;
-import com.google.cloud.firestore.WriteBatch;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -49,17 +47,7 @@ public class ReceiptFirestoreService {
         receiptData.put("createdAt", FieldValue.serverTimestamp());
 
         try {
-            WriteBatch batch = firestore.batch();
-            batch.set(receiptRef, receiptData);
-            batch.set(
-                    firestore.collection("users").document(userId),
-                    Map.of(
-                            "ecoPoint", FieldValue.increment(calculateEcoPoint(items)),
-                            "updatedAt", FieldValue.serverTimestamp()
-                    ),
-                    SetOptions.merge()
-            );
-            batch.commit().get();
+            receiptRef.set(receiptData).get();
             return receiptId;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -90,23 +78,6 @@ public class ReceiptFirestoreService {
         }
 
         return itemMaps;
-    }
-
-    private int calculateEcoPoint(List<ReceiptItemAnalysisResponse> items) {
-        int totalPoint = 0;
-
-        for (ReceiptItemAnalysisResponse item : items) {
-            totalPoint += pointFromCarbonScore(item.getCarbonScore());
-        }
-
-        return totalPoint;
-    }
-
-    private int pointFromCarbonScore(int carbonScore) {
-        if (carbonScore <= 0) {
-            return 0;
-        }
-        return Math.max(20, (6 - carbonScore) * 20);
     }
 
     private Map<String, Object> convertSummaryToMap(
