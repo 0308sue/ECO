@@ -2,9 +2,15 @@ import 'dart:io';
 
 const String kakaoNativeAppKey = String.fromEnvironment('KAKAO_NATIVE_APP_KEY');
 
+const String kakaoJavascriptAppKey = String.fromEnvironment(
+  'KAKAO_JAVASCRIPT_APP_KEY',
+);
+
 const String configuredAuthApiBaseUrl = String.fromEnvironment(
   'AUTH_API_BASE_URL',
 );
+
+
 
 String get authApiBaseUrl {
   if (configuredAuthApiBaseUrl.isNotEmpty) {

@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'eco_place_map_page.dart';
+import '../place/eco_place_map_page.dart';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -303,9 +303,7 @@ class _RecommendationResultPageState extends State<RecommendationResultPage> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => EcoPlaceMapPage(
-                      places: _recommendedPlaces,
-                    ),
+                    builder: (_) => const EcoPlaceMapPage(),
                   ),
                 );
               },

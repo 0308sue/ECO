@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+
 import '../../core/widgets/info_tile.dart';
 import '../../utils/validators.dart';
 import '../auth/auth_gate.dart';
@@ -9,6 +10,7 @@ import '../auth/auth_service.dart';
 import '../profile/user_profile_service.dart';
 import '../../ranking/screen/ranking_page.dart';
 import '../receipt/receipt_scan_page.dart';
+import '../place/eco_place_map_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key, required this.user});
@@ -123,8 +125,25 @@ class _HomePageState extends State<HomePage> {
                 icon: const Icon(Icons.receipt_long),
                 label: const Text('영수증 OCR 분석하기'),
               ),
+
+              //테스트용추가
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const EcoPlaceMapPage(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.map_outlined),
+                label: const Text('친환경 장소 지도 보기'),
+              ),
             ],
           );
+
+
+
         },
       ),
     );

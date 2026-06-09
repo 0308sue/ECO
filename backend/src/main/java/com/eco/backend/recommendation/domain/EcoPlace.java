@@ -4,6 +4,7 @@ import java.util.List;
 
 public class EcoPlace {
 
+    private String id;
     private String name;
     private String type;
     private String address;
@@ -18,6 +19,14 @@ public class EcoPlace {
     private Boolean isActive;
 
     public EcoPlace() {
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
     }
 
     public String getName() {

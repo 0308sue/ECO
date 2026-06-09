@@ -21,5 +21,6 @@ void main() async {
     kakao.KakaoSdk.init(nativeAppKey: kakaoNativeAppKey);
   }
 
+
   runApp(const EcoApp());
 }

@@ -41,7 +41,7 @@ public class EcoRecommendationRepository {
                 .toList();
     }
 
-    public List<EcoPlace> findAllActiveEcoPlaces() throws Exception {
+    public List<EcoPlace> findAllActivePlaces() throws Exception {
         Firestore db = FirestoreClient.getFirestore();
 
         List<QueryDocumentSnapshot> documents = db.collection("eco_places")
@@ -51,7 +51,7 @@ public class EcoRecommendationRepository {
                 .getDocuments();
 
         return documents.stream()
-                .map(document -> document.toObject(EcoPlace.class))
+                .map(this::toEcoPlace)
                 .toList();
     }
 
@@ -66,7 +66,13 @@ public class EcoRecommendationRepository {
                 .getDocuments();
 
         return documents.stream()
-                .map(document -> document.toObject(EcoPlace.class))
+                .map(this::toEcoPlace)
                 .toList();
+    }
+
+    private EcoPlace toEcoPlace(QueryDocumentSnapshot document) {
+        EcoPlace place = document.toObject(EcoPlace.class);
+        place.setId(document.getId());
+        return place;
     }
 }
