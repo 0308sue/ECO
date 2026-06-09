@@ -31,4 +31,9 @@ public class RecommendationController {
     ) {
         return recommendationService.recommendPlaces(request);
     }
+
+    @GetMapping("/places")
+    public List<RecommendedPlaceResponse> getAllPlaces() {
+        return recommendationService.getAllPlaces();
+    }
 }

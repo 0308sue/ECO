@@ -58,3 +58,9 @@ frontend/ios/Flutter/Secrets.xcconfig
 
 frontend/android/debug.cer
 *.cer
+
+backend/*firebase-adminsdk*.json
+backend/*serviceAccount*.json
+backend/firebase-adminsdk.json
+**/firebase-service-account.json
+**/serviceAccount*.json

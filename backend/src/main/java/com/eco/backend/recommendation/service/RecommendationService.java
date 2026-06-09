@@ -195,6 +195,18 @@ public class RecommendationService {
         return responses;
     }
 
+    public List<RecommendedPlaceResponse> getAllPlaces() {
+        try {
+            List<EcoPlace> places = ecoRecommendationRepository.findAllActivePlaces();
+
+            return places.stream()
+                    .map(this::toRecommendedPlaceResponse)
+                    .toList();
+        } catch (Exception e) {
+            throw new RuntimeException("전체 추천 장소 조회 중 오류가 발생했습니다.", e);
+        }
+    }
+
     private RecommendationRule findMatchedRule(String matchName, String category, String subCategory) {
         for (RecommendationRule rule : rules) {
             if (rule.matches(matchName, category, subCategory)) {
@@ -301,17 +313,23 @@ public class RecommendationService {
 
             places.stream()
                     .limit(5)
-                    .forEach(place -> responses.add(new RecommendedPlaceResponse(
-                            place.getName(),
-                            place.getType(),
-                            place.getAddress(),
-                            place.getLat(),
-                            place.getLng(),
-                            place.getDescription()
-                    )));
+                    .map(this::toRecommendedPlaceResponse)
+                    .forEach(responses::add);
         } catch (Exception e) {
             throw new RuntimeException("추천 장소 조회 중 오류가 발생했습니다.", e);
         }
+    }
+
+    private RecommendedPlaceResponse toRecommendedPlaceResponse(EcoPlace place) {
+        return new RecommendedPlaceResponse(
+                place.getId(),
+                place.getName(),
+                place.getType(),
+                place.getAddress(),
+                place.getLat(),
+                place.getLng(),
+                place.getDescription()
+        );
     }
 
     private String getMatchName(ReceiptItem item) {

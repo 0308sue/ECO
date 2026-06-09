@@ -1,6 +1,7 @@
 package com.eco.backend.recommendation.dto;
 
 public record RecommendedPlaceResponse(
+        String id,
         String placeName,
         String placeType,
         String address,
