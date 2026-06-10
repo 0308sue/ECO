@@ -322,15 +322,38 @@ class _LedgerPageState extends State<LedgerPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          '${_formatShortDate(_selectedDate)} 소비 내역',
-          style: const TextStyle(
-            color: textColor,
-            fontSize: 22,
-            fontWeight: FontWeight.w800,
-            letterSpacing: -0.5,
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                '${_formatShortDate(_selectedDate)} 소비 내역',
+                style: const TextStyle(
+                  color: textColor,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.5,
+                ),
+              ),
+            ),
+            FilledButton.icon(
+              onPressed: _showManualEntrySheet,
+              style: FilledButton.styleFrom(
+                backgroundColor: primaryColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                ),
+              ),
+              icon: const Icon(Icons.add_rounded, size: 20),
+              label: const Text(
+                '추가',
+                style: TextStyle(fontWeight: FontWeight.w800),
+              ),
+            ),
+          ],
         ),
+
         const SizedBox(height: 12),
         if (receipts.isEmpty)
           _buildEmptyState()
@@ -414,6 +437,338 @@ class _LedgerPageState extends State<LedgerPage> {
       ),
     );
   }
+
+  void _showManualEntrySheet() {
+  final titleController = TextEditingController();
+  final amountController = TextEditingController();
+  final memoController = TextEditingController();
+
+  String selectedCategory = '기타';
+  DateTime selectedDate = _selectedDate;
+
+  final categories = [
+    '식품',
+    '음료',
+    '생활용품',
+    '일회용품',
+    '전자제품',
+    '교통',
+    '카페',
+    '기타',
+  ];
+
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: backgroundColor,
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+    ),
+    builder: (context) {
+      return StatefulBuilder(
+        builder: (context, setModalState) {
+          return Padding(
+            padding: EdgeInsets.only(
+              left: 22,
+              right: 22,
+              top: 18,
+              bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 42,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    '지출 추가',
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 25,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.6,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    '영수증 없이 소비 내역을 직접 기록해요.',
+                    style: TextStyle(
+                      color: subTextColor,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 22),
+
+                  _ManualInputField(
+                    controller: titleController,
+                    label: '내용 / 매장명',
+                    hintText: '예: 스타벅스, 편의점, 점심식사',
+                    icon: Icons.storefront_rounded,
+                  ),
+                  const SizedBox(height: 14),
+
+                  _ManualInputField(
+                    controller: amountController,
+                    label: '금액',
+                    hintText: '예: 5500',
+                    icon: Icons.payments_rounded,
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 14),
+
+                  const Text(
+                    '카테고리',
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    decoration: BoxDecoration(
+                      color: cardColor,
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(
+                        color: primaryColor.withValues(alpha: 0.14),
+                      ),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: selectedCategory,
+                        isExpanded: true,
+                        borderRadius: BorderRadius.circular(18),
+                        items: categories
+                            .map(
+                              (category) => DropdownMenuItem(
+                                value: category,
+                                child: Text(category),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (value) {
+                          if (value == null) {
+                            return;
+                          }
+
+                          setModalState(() {
+                            selectedCategory = value;
+                          });
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  const Text(
+                    '날짜',
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  InkWell(
+                    borderRadius: BorderRadius.circular(18),
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: selectedDate,
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime(2100),
+                      );
+
+                      if (picked == null) {
+                        return;
+                      }
+
+                      setModalState(() {
+                        selectedDate = picked;
+                      });
+                    },
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 15,
+                      ),
+                      decoration: BoxDecoration(
+                        color: cardColor,
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(
+                          color: primaryColor.withValues(alpha: 0.14),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.calendar_month_rounded,
+                            color: primaryColor,
+                            size: 22,
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            _formatDateWithWeekday(selectedDate),
+                            style: const TextStyle(
+                              color: textColor,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  _ManualInputField(
+                    controller: memoController,
+                    label: '메모',
+                    hintText: '선택 입력',
+                    icon: Icons.edit_note_rounded,
+                    maxLines: 2,
+                  ),
+                  const SizedBox(height: 24),
+
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: () async {
+                        await _saveManualEntry(
+                          context: context,
+                          title: titleController.text,
+                          amountText: amountController.text,
+                          category: selectedCategory,
+                          memo: memoController.text,
+                          selectedDate: selectedDate,
+                        );
+                      },
+                      style: FilledButton.styleFrom(
+                        backgroundColor: primaryColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 15),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                      ),
+                      child: const Text(
+                        '저장하기',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    },
+  ).whenComplete(() {
+    titleController.dispose();
+    amountController.dispose();
+    memoController.dispose();
+  });
+}
+
+Future<void> _saveManualEntry({
+  required BuildContext context,
+  required String title,
+  required String amountText,
+  required String category,
+  required String memo,
+  required DateTime selectedDate,
+}) async {
+  final messenger = ScaffoldMessenger.of(context);
+  final navigator = Navigator.of(context);
+
+  final trimmedTitle = title.trim();
+  final amount = int.tryParse(
+    amountText.replaceAll(RegExp(r'[^0-9]'), ''),
+  );
+
+  if (trimmedTitle.isEmpty) {
+    messenger.showSnackBar(
+      const SnackBar(content: Text('내용 또는 매장명을 입력해주세요.')),
+    );
+    return;
+  }
+
+  if (amount == null || amount <= 0) {
+    messenger.showSnackBar(
+      const SnackBar(content: Text('금액을 올바르게 입력해주세요.')),
+    );
+    return;
+  }
+
+  final now = DateTime.now();
+  final purchasedAt = DateTime(
+    selectedDate.year,
+    selectedDate.month,
+    selectedDate.day,
+    now.hour,
+    now.minute,
+  );
+
+  try {
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(widget.userId)
+        .collection('receipts')
+        .add({
+      'storeName': trimmedTitle,
+      'totalAmount': amount,
+      'totalPrice': amount,
+      'purchasedAt': Timestamp.fromDate(purchasedAt),
+      'createdAt': FieldValue.serverTimestamp(),
+      'source': 'manual',
+      'memo': memo.trim(),
+      'items': [
+        {
+          'itemName': trimmedTitle,
+          'name': trimmedTitle,
+          'category': category,
+          'price': amount,
+        }
+      ],
+    });
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _selectedDate = selectedDate;
+      _selectedMonth = DateTime(selectedDate.year, selectedDate.month);
+    });
+
+    navigator.pop();
+
+    messenger.showSnackBar(
+      const SnackBar(content: Text('지출 내역이 추가되었습니다.')),
+    );
+  } catch (error) {
+    messenger.showSnackBar(
+      SnackBar(content: Text('지출 내역 저장에 실패했습니다. $error')),
+    );
+  }
+}
 
   void _showReceiptDetail(LedgerReceipt receipt) {
     showModalBottomSheet(
@@ -1075,6 +1430,79 @@ class LedgerReceipt {
     }
 
     return null;
+  }
+}
+
+class _ManualInputField extends StatelessWidget {
+  const _ManualInputField({
+    required this.controller,
+    required this.label,
+    required this.hintText,
+    required this.icon,
+    this.keyboardType,
+    this.maxLines = 1,
+  });
+
+  final TextEditingController controller;
+  final String label;
+  final String hintText;
+  final IconData icon;
+  final TextInputType? keyboardType;
+  final int maxLines;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: _LedgerPageState.textColor,
+            fontSize: 15,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: controller,
+          keyboardType: keyboardType,
+          maxLines: maxLines,
+          decoration: InputDecoration(
+            hintText: hintText,
+            prefixIcon: Icon(
+              icon,
+              color: _LedgerPageState.primaryColor,
+            ),
+            filled: true,
+            fillColor: _LedgerPageState.cardColor,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 15,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(18),
+              borderSide: BorderSide(
+                color: _LedgerPageState.primaryColor.withValues(alpha: 0.14),
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(18),
+              borderSide: BorderSide(
+                color: _LedgerPageState.primaryColor.withValues(alpha: 0.14),
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(18),
+              borderSide: const BorderSide(
+                color: _LedgerPageState.primaryColor,
+                width: 1.4,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }
 
