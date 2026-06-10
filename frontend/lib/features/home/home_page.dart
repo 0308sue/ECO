@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../ledger/ledger_page.dart';
 import '../receipt/receipt_scan_page.dart';
 import '../place/eco_place_map_page.dart';
 import '../my/my_page.dart';
@@ -38,7 +39,12 @@ class _HomePageState extends State<HomePage> {
 
     final pages = [
       _buildHomeBody(context),
-      const _LedgerPlaceholderPage(),
+      LedgerPage(
+        userId: widget.userId,
+        onTapScan: () {
+          _moveTab(2);
+        },
+      ),
       ReceiptScanPage(userId: widget.userId),
       const EcoPlaceMapPage(),
       user == null ? const _LoginMissingPage() : MyPage(user: user),
@@ -336,29 +342,6 @@ class _FeatureTile extends StatelessWidget {
                 size: 28,
               ),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _LedgerPlaceholderPage extends StatelessWidget {
-  const _LedgerPlaceholderPage();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      backgroundColor: HomePage.backgroundColor,
-      body: SafeArea(
-        child: Center(
-          child: Text(
-            '가계부 페이지 연결 예정',
-            style: TextStyle(
-              fontSize: 18,
-              color: HomePage.subTextColor,
-              fontWeight: FontWeight.w600,
-            ),
           ),
         ),
       ),
