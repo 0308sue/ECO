@@ -1,11 +1,11 @@
-import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 
 import '../receipt/receipt_scan_page.dart';
 import '../place/eco_place_map_page.dart';
 import '../my/my_page.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({
     super.key,
     required this.userId,
@@ -20,101 +20,110 @@ class HomePage extends StatelessWidget {
   static const Color cardColor = Color(0xFFFFFFFF);
 
   @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  int _currentIndex = 0;
+
+  void _moveTab(int index) {
+    setState(() {
+      _currentIndex = index;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+
+    final pages = [
+      _buildHomeBody(context),
+      const _LedgerPlaceholderPage(),
+      ReceiptScanPage(userId: widget.userId),
+      const EcoPlaceMapPage(),
+      user == null ? const _LoginMissingPage() : MyPage(user: user),
+    ];
+
     return Scaffold(
-      backgroundColor: backgroundColor,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(24, 28, 24, 32),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildTopArea(),
-              const SizedBox(height: 28),
-
-              _buildMainActionButton(
-                icon: Icons.document_scanner_rounded,
-                title: '영수증 OCR 분석하기',
-                subtitle: '영수증을 촬영하고 탄소 점수를 확인해보세요.',
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ReceiptScanPage(userId: userId),
-                    ),
-                  );
-                },
-              ),
-
-              const SizedBox(height: 28),
-              _buildSectionTitle('친환경 추천'),
-              const SizedBox(height: 12),
-
-              _FeatureTile(
-                icon: Icons.shopping_bag_rounded,
-                title: '대체품 추천 보기',
-                subtitle: '소비 품목을 바탕으로 친환경 대체품을 확인해요.',
-                onTap: () {
-                  _showPreparingMessage(context, '대체품 추천 페이지 연결 예정');
-                },
-              ),
-              const SizedBox(height: 12),
-
-              _FeatureTile(
-                icon: Icons.map_rounded,
-                title: '주변 친환경 장소 보기',
-                subtitle: '제로웨이스트샵, 리필샵 등 주변 장소를 확인해요.',
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const EcoPlaceMapPage(),
-                    ),
-                  );
-                },
-              ),
-
-              const SizedBox(height: 28),
-              _buildSectionTitle('빠른 이동'),
-              const SizedBox(height: 12),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: _SmallMenuButton(
-                      icon: Icons.leaderboard_rounded,
-                      label: '랭킹',
-                      onTap: () {
-                        _showPreparingMessage(context, '랭킹 페이지 연결 예정');
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _SmallMenuButton(
-                      icon: Icons.person_rounded,
-                      label: '마이페이지',
-                      onTap: () {
-                        final user = FirebaseAuth.instance.currentUser;
-
-                        if(user == null) {
-                          _showPreparingMessage(context, '로그인 정보가 없습니다. 로그인 후 이용해주세요');
-                          return;
-                        }
-
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => MyPage(user: user),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ],
+      backgroundColor: HomePage.backgroundColor,
+      body: IndexedStack(
+        index: _currentIndex,
+        children: pages,
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        selectedItemColor: HomePage.primaryColor,
+        unselectedItemColor: Colors.grey,
+        type: BottomNavigationBarType.fixed,
+        onTap: _moveTab,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_rounded),
+            label: 'Home',
           ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.receipt_long_rounded),
+            label: 'Ledger',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.camera_alt_outlined),
+            label: 'Scan',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.map_outlined),
+            label: 'Map',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            label: 'My',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHomeBody(BuildContext context) {
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(24, 28, 24, 32),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildTopArea(),
+            const SizedBox(height: 28),
+
+            _buildMainActionButton(
+              icon: Icons.document_scanner_rounded,
+              title: '영수증 OCR 분석하기',
+              subtitle: '영수증을 촬영하고 탄소 점수를 확인해보세요.',
+              onTap: () {
+                _moveTab(2);
+              },
+            ),
+
+            const SizedBox(height: 28),
+            _buildSectionTitle('친환경 추천'),
+            const SizedBox(height: 12),
+
+            _FeatureTile(
+              icon: Icons.shopping_bag_rounded,
+              title: '대체품 추천 보기',
+              subtitle: '소비 품목을 바탕으로 친환경 대체품을 확인해요.',
+              onTap: () {
+                _showPreparingMessage(context, '대체품 추천 페이지 연결 예정');
+              },
+            ),
+            const SizedBox(height: 12),
+
+            _FeatureTile(
+              icon: Icons.map_rounded,
+              title: '주변 친환경 장소 보기',
+              subtitle: '제로웨이스트샵, 리필샵 등 주변 장소를 확인해요.',
+              onTap: () {
+                _moveTab(3);
+              },
+            ),
+          ],
         ),
       ),
     );
@@ -129,7 +138,7 @@ class HomePage extends StatelessWidget {
           style: TextStyle(
             fontSize: 34,
             fontWeight: FontWeight.w700,
-            color: textColor,
+            color: HomePage.textColor,
             letterSpacing: -0.8,
           ),
         ),
@@ -139,7 +148,7 @@ class HomePage extends StatelessWidget {
           style: TextStyle(
             fontSize: 21,
             fontWeight: FontWeight.w600,
-            color: textColor,
+            color: HomePage.textColor,
             height: 1.4,
             letterSpacing: -0.4,
           ),
@@ -149,7 +158,7 @@ class HomePage extends StatelessWidget {
           '영수증 분석부터 친환경 장소 추천까지 한 번에 확인해요.',
           style: TextStyle(
             fontSize: 16,
-            color: subTextColor,
+            color: HomePage.subTextColor,
             height: 1.4,
           ),
         ),
@@ -164,7 +173,7 @@ class HomePage extends StatelessWidget {
     required VoidCallback onTap,
   }) {
     return Material(
-      color: primaryColor,
+      color: HomePage.primaryColor,
       borderRadius: BorderRadius.circular(24),
       child: InkWell(
         borderRadius: BorderRadius.circular(24),
@@ -178,7 +187,7 @@ class HomePage extends StatelessWidget {
                 width: 54,
                 height: 54,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.16),
+                  color: Colors.white.withValues(alpha: 0.16),
                   borderRadius: BorderRadius.circular(18),
                 ),
                 child: Icon(
@@ -206,7 +215,7 @@ class HomePage extends StatelessWidget {
                       subtitle,
                       style: TextStyle(
                         fontSize: 15,
-                        color: Colors.white.withOpacity(0.86),
+                        color: Colors.white.withValues(alpha: 0.86),
                         height: 1.35,
                       ),
                     ),
@@ -231,7 +240,7 @@ class HomePage extends StatelessWidget {
       style: const TextStyle(
         fontSize: 22,
         fontWeight: FontWeight.w700,
-        color: textColor,
+        color: HomePage.textColor,
         letterSpacing: -0.5,
       ),
     );
@@ -260,15 +269,10 @@ class _FeatureTile extends StatelessWidget {
   final String subtitle;
   final VoidCallback onTap;
 
-  static const Color primaryColor = HomePage.primaryColor;
-  static const Color textColor = HomePage.textColor;
-  static const Color subTextColor = HomePage.subTextColor;
-  static const Color cardColor = HomePage.cardColor;
-
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: cardColor,
+      color: HomePage.cardColor,
       borderRadius: BorderRadius.circular(22),
       child: InkWell(
         borderRadius: BorderRadius.circular(22),
@@ -279,7 +283,7 @@ class _FeatureTile extends StatelessWidget {
             borderRadius: BorderRadius.circular(22),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.06),
+                color: Colors.black.withValues(alpha: 0.06),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -291,12 +295,12 @@ class _FeatureTile extends StatelessWidget {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: primaryColor.withOpacity(0.1),
+                  color: HomePage.primaryColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Icon(
                   icon,
-                  color: primaryColor,
+                  color: HomePage.primaryColor,
                   size: 28,
                 ),
               ),
@@ -310,7 +314,7 @@ class _FeatureTile extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
-                        color: textColor,
+                        color: HomePage.textColor,
                         letterSpacing: -0.3,
                       ),
                     ),
@@ -319,7 +323,7 @@ class _FeatureTile extends StatelessWidget {
                       subtitle,
                       style: const TextStyle(
                         fontSize: 14,
-                        color: subTextColor,
+                        color: HomePage.subTextColor,
                         height: 1.35,
                       ),
                     ),
@@ -328,7 +332,7 @@ class _FeatureTile extends StatelessWidget {
               ),
               const Icon(
                 Icons.chevron_right_rounded,
-                color: subTextColor,
+                color: HomePage.subTextColor,
                 size: 28,
               ),
             ],
@@ -339,58 +343,45 @@ class _FeatureTile extends StatelessWidget {
   }
 }
 
-class _SmallMenuButton extends StatelessWidget {
-  const _SmallMenuButton({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  static const Color primaryColor = HomePage.primaryColor;
-  static const Color cardColor = HomePage.cardColor;
-  static const Color textColor = HomePage.textColor;
+class _LedgerPlaceholderPage extends StatelessWidget {
+  const _LedgerPlaceholderPage();
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: cardColor,
-      borderRadius: BorderRadius.circular(20),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 18),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.06),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
+    return const Scaffold(
+      backgroundColor: HomePage.backgroundColor,
+      body: SafeArea(
+        child: Center(
+          child: Text(
+            '가계부 페이지 연결 예정',
+            style: TextStyle(
+              fontSize: 18,
+              color: HomePage.subTextColor,
+              fontWeight: FontWeight.w600,
+            ),
           ),
-          child: Column(
-            children: [
-              Icon(
-                icon,
-                color: primaryColor,
-                size: 30,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: textColor,
-                ),
-              ),
-            ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LoginMissingPage extends StatelessWidget {
+  const _LoginMissingPage();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      backgroundColor: HomePage.backgroundColor,
+      body: SafeArea(
+        child: Center(
+          child: Text(
+            '로그인 정보가 없습니다.',
+            style: TextStyle(
+              fontSize: 18,
+              color: HomePage.subTextColor,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
       ),
