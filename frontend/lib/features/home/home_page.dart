@@ -1,134 +1,70 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-
-import '../../core/widgets/info_tile.dart';
-import '../../utils/validators.dart';
-import '../auth/auth_gate.dart';
-import '../auth/auth_service.dart';
-import '../profile/user_profile_service.dart';
-import '../../ranking/screen/ranking_page.dart';
 import '../receipt/receipt_scan_page.dart';
 import '../place/eco_place_map_page.dart';
+import '../my/my_page.dart';
 
-class HomePage extends StatefulWidget {
-  const HomePage({super.key, required this.user});
+class HomePage extends StatelessWidget {
+  const HomePage({
+    super.key,
+    required this.userId,
+  });
 
-  final User user;
+  final String userId;
 
-  @override
-  State<HomePage> createState() => _HomePageState();
-}
-
-class _HomePageState extends State<HomePage> {
-  final AuthService _authService = AuthService();
-
-  @override
-  void initState() {
-    super.initState();
-    _ensureUserDocument();
-  }
-
-  Future<void> _ensureUserDocument() async {
-    await ensureUserProfile(widget.user);
-  }
+  static const Color backgroundColor = Color(0xFFF7FAF2);
+  static const Color primaryColor = Color(0xFF3B713B);
+  static const Color textColor = Color(0xFF222820);
+  static const Color subTextColor = Color(0xFF5A6358);
+  static const Color cardColor = Color(0xFFFFFFFF);
 
   @override
   Widget build(BuildContext context) {
-    final userDoc = FirebaseFirestore.instance
-        .collection('users')
-        .doc(widget.user.uid);
-
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('ECO 마이페이지'),
-        actions: [
-          IconButton(
-            tooltip: '로그아웃',
-            onPressed: () => _signOut(context),
-            icon: const Icon(Icons.logout),
-          ),
-          PopupMenuButton<String>(
-            onSelected: (value) {
-              if (value == 'delete_account') {
-                _confirmDeleteAccount(context);
-              }
-            },
-            itemBuilder: (context) => const [
-              PopupMenuItem(value: 'delete_account', child: Text('회원 탈퇴')),
-            ],
-          ),
-        ],
-      ),
-      body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-        stream: userDoc.snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          final data = snapshot.data?.data() ?? {};
-          final nickname = data['nickname'] as String? ?? '사용자';
-          final email = data['email'] as String? ?? widget.user.email ?? '';
-          final ecoPoint = data['ecoPoint'] as int? ?? 0;
-          final grade = data['grade'] as String? ?? 'Seed';
-          final badges = List<String>.from(data['badges'] ?? const []);
-
-          return ListView(
-            padding: const EdgeInsets.all(20),
+      backgroundColor: backgroundColor,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(24, 28, 24, 32),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                '$nickname님',
-                style: Theme.of(context).textTheme.headlineMedium,
-              ),
-              const SizedBox(height: 4),
-              Text(email),
-              const SizedBox(height: 24),
-              InfoTile(
-                title: '현재 탄소 점수',
-                value: '$ecoPoint Eco Point',
-                icon: Icons.eco,
-              ),
-              InfoTile(
-                title: '등급',
-                value: grade,
-                icon: Icons.workspace_premium,
-              ),
-              InfoTile(
-                title: '획득 배지',
-                value: badges.isEmpty ? '아직 획득한 배지가 없습니다.' : badges.join(', '),
-                icon: Icons.military_tech,
-              ),
-              const SizedBox(height: 20),
-              FilledButton.icon(
-                onPressed: () {
-                  Navigator.of(context).push(
+              _buildTopArea(),
+              const SizedBox(height: 28),
+
+              _buildMainActionButton(
+                icon: Icons.document_scanner_rounded,
+                title: '영수증 OCR 분석하기',
+                subtitle: '영수증을 촬영하고 탄소 점수를 확인해보세요.',
+                onTap: () {
+                  Navigator.push(
+                    context,
                     MaterialPageRoute(
-                      builder: (_) =>
-                          RankingPage(currentUserId: widget.user.uid),
+                      builder: (_) => ReceiptScanPage(userId: userId),
                     ),
                   );
                 },
-                icon: const Icon(Icons.leaderboard),
-                label: const Text('랭킹 보기'),
-              ),
-              const SizedBox(height: 8),
-              FilledButton.icon(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => ReceiptScanPage(userId: widget.user.uid),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.receipt_long),
-                label: const Text('영수증 OCR 분석하기'),
               ),
 
-              //테스트용추가
-              ElevatedButton.icon(
-                onPressed: () {
+              const SizedBox(height: 28),
+              _buildSectionTitle('친환경 추천'),
+              const SizedBox(height: 12),
+
+              _FeatureTile(
+                icon: Icons.shopping_bag_rounded,
+                title: '대체품 추천 보기',
+                subtitle: '소비 품목을 바탕으로 친환경 대체품을 확인해요.',
+                onTap: () {
+                  _showPreparingMessage(context, '대체품 추천 페이지 연결 예정');
+                },
+              ),
+              const SizedBox(height: 12),
+
+              _FeatureTile(
+                icon: Icons.map_rounded,
+                title: '주변 친환경 장소 보기',
+                subtitle: '제로웨이스트샵, 리필샵 등 주변 장소를 확인해요.',
+                onTap: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -136,91 +72,328 @@ class _HomePageState extends State<HomePage> {
                     ),
                   );
                 },
-                icon: const Icon(Icons.map_outlined),
-                label: const Text('친환경 장소 지도 보기'),
+              ),
+
+              const SizedBox(height: 28),
+              _buildSectionTitle('빠른 이동'),
+              const SizedBox(height: 12),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: _SmallMenuButton(
+                      icon: Icons.leaderboard_rounded,
+                      label: '랭킹',
+                      onTap: () {
+                        _showPreparingMessage(context, '랭킹 페이지 연결 예정');
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _SmallMenuButton(
+                      icon: Icons.person_rounded,
+                      label: '마이페이지',
+                      onTap: () {
+                        final user = FirebaseAuth.instance.currentUser;
+
+                        if(user == null) {
+                          _showPreparingMessage(context, '로그인 정보가 없습니다. 로그인 후 이용해주세요');
+                          return;
+                        }
+
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => MyPage(user: user),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
               ),
             ],
-          );
-
-
-
-        },
+          ),
+        ),
       ),
     );
   }
 
-  Future<void> _confirmDeleteAccount(BuildContext context) async {
-    final shouldDelete = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('회원 탈퇴'),
-        content: const Text('계정과 사용자 정보가 삭제됩니다. 정말 탈퇴할까요?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('취소'),
+  Widget _buildTopArea() {
+    return const Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'ECO 홈',
+          style: TextStyle(
+            fontSize: 34,
+            fontWeight: FontWeight.w700,
+            color: textColor,
+            letterSpacing: -0.8,
           ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.error,
-              foregroundColor: Theme.of(context).colorScheme.onError,
-            ),
-            child: const Text('탈퇴'),
+        ),
+        SizedBox(height: 24),
+        Text(
+          '오늘도 친환경 소비를 기록해볼까요?',
+          style: TextStyle(
+            fontSize: 21,
+            fontWeight: FontWeight.w600,
+            color: textColor,
+            height: 1.4,
+            letterSpacing: -0.4,
           ),
-        ],
+        ),
+        SizedBox(height: 8),
+        Text(
+          '영수증 분석부터 친환경 장소 추천까지 한 번에 확인해요.',
+          style: TextStyle(
+            fontSize: 16,
+            color: subTextColor,
+            height: 1.4,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMainActionButton({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: primaryColor,
+      borderRadius: BorderRadius.circular(24),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(24),
+        onTap: onTap,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 24),
+          child: Row(
+            children: [
+              Container(
+                width: 54,
+                height: 54,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.16),
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Icon(
+                  icon,
+                  color: Colors.white,
+                  size: 30,
+                ),
+              ),
+              const SizedBox(width: 18),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                        letterSpacing: -0.4,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: Colors.white.withOpacity(0.86),
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: Colors.white,
+                size: 32,
+              ),
+            ],
+          ),
+        ),
       ),
     );
-
-    if (shouldDelete != true || !context.mounted) {
-      return;
-    }
-
-    await _deleteAccount(context, widget.user);
   }
 
-  Future<void> _signOut(BuildContext context) async {
-    await _authService.signOut();
-
-    if (context.mounted) {
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const AuthGate()),
-        (route) => false,
-      );
-    }
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title,
+      style: const TextStyle(
+        fontSize: 22,
+        fontWeight: FontWeight.w700,
+        color: textColor,
+        letterSpacing: -0.5,
+      ),
+    );
   }
 
-  Future<void> _deleteAccount(BuildContext context, User user) async {
-    final messenger = ScaffoldMessenger.of(context);
+  void _showPreparingMessage(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+}
 
-    try {
-      await _authService.deleteAccount(user);
+class _FeatureTile extends StatelessWidget {
+  const _FeatureTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
 
-      if (context.mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const AuthGate()),
-          (route) => false,
-        );
-      }
-    } on FirebaseAuthException catch (error) {
-      if (error.code == 'requires-recent-login') {
-        messenger.showSnackBar(
-          const SnackBar(content: Text('보안을 위해 다시 로그인한 뒤 탈퇴해주세요.')),
-        );
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
 
-        if (!context.mounted) {
-          return;
-        }
+  static const Color primaryColor = HomePage.primaryColor;
+  static const Color textColor = HomePage.textColor;
+  static const Color subTextColor = HomePage.subTextColor;
+  static const Color cardColor = HomePage.cardColor;
 
-        await _signOut(context);
-        return;
-      }
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: cardColor,
+      borderRadius: BorderRadius.circular(22),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(22),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(22),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.06),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: primaryColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(
+                  icon,
+                  color: primaryColor,
+                  size: 28,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: textColor,
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: subTextColor,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: subTextColor,
+                size: 28,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
 
-      messenger.showSnackBar(
-        SnackBar(content: Text('회원 탈퇴에 실패했습니다. ${authErrorMessage(error)}')),
-      );
-    } catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text('회원 탈퇴에 실패했습니다. $error')));
-    }
+class _SmallMenuButton extends StatelessWidget {
+  const _SmallMenuButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  static const Color primaryColor = HomePage.primaryColor;
+  static const Color cardColor = HomePage.cardColor;
+  static const Color textColor = HomePage.textColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: cardColor,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 18),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.06),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              Icon(
+                icon,
+                color: primaryColor,
+                size: 30,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: textColor,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

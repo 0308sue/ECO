@@ -37,7 +37,7 @@ class UserProfileGate extends StatelessWidget {
           return NicknameSetupPage(user: user);
         }
 
-        return HomePage(user: user);
+        return HomePage(userId: user.uid);
       },
     );
   }
