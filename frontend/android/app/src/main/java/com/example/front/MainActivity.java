@@ -84,9 +84,15 @@ public class MainActivity extends FlutterFragmentActivity {
 
             debugInfo.put("clientIdPreview", preview(clientId));
             debugInfo.put("clientIdLength", clientId == null ? 0 : clientId.length());
+            debugInfo.put("clientSecretPreview", preview(clientSecret));
+            debugInfo.put("clientSecretLength", clientSecret == null ? 0 : clientSecret.length());
             debugInfo.put("hasClientSecret", clientSecret != null && !clientSecret.isEmpty());
             debugInfo.put("clientName", clientName == null ? "" : clientName);
-            debugInfo.put("looksLikeExample", clientId != null && clientId.contains("your_"));
+            debugInfo.put(
+                    "looksLikeExample",
+                    (clientId != null && clientId.contains("your_"))
+                            || (clientSecret != null && clientSecret.contains("your_"))
+            );
         } catch (Exception error) {
             debugInfo.put("error", error.getMessage() == null ? "error" : error.getMessage());
         }

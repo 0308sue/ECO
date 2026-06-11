@@ -1,54 +1,53 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:http/http.dart' as http;
 
 import '../model/ranking_user.dart';
 
 class RankingService {
-  RankingService({FirebaseFirestore? firestore})
-    : _firestore = firestore ?? FirebaseFirestore.instance;
+  RankingService({http.Client? client}) : _client = client ?? http.Client();
 
-  final FirebaseFirestore _firestore;
+  final http.Client _client;
 
   Stream<List<RankingUser>> watchTopUsers({int limit = 30}) {
-    return _firestore
-        .collection('users')
-        .orderBy('ecoPoint', descending: true)
-        .limit(limit)
-        .snapshots()
-        .map((snapshot) {
-          return snapshot.docs.indexed.map((entry) {
-            final index = entry.$1;
-            final doc = entry.$2;
-            final data = doc.data();
-
-            return RankingUser(
-              id: doc.id,
-              nickname: _readNickname(data, index),
-              ecoPoint: _readEcoPoint(data),
-              grade: (data['grade'] as String?)?.trim().isEmpty == false
-                  ? data['grade'] as String
-                  : 'Seed',
-              rank: index + 1,
-            );
-          }).toList();
-        });
+    return Stream.fromFuture(fetchTopUsers(limit: limit));
   }
 
-  String _readNickname(Map<String, dynamic> data, int index) {
-    final nickname = (data['nickname'] as String?)?.trim();
-    if (nickname != null && nickname.isNotEmpty) {
-      return nickname;
+  Future<List<RankingUser>> fetchTopUsers({int limit = 30}) async {
+    final uri = Uri.parse(
+      '$_rankingApiBaseUrl/api/rankings',
+    ).replace(queryParameters: {'limit': '$limit'});
+    final response = await _client.get(uri);
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception('랭킹 조회에 실패했습니다. 상태 코드: ${response.statusCode}');
     }
-    return 'ECO 유저 ${index + 1}';
+
+    final body = jsonDecode(utf8.decode(response.bodyBytes));
+    if (body is! List) {
+      throw Exception('랭킹 응답 형식이 올바르지 않습니다.');
+    }
+
+    return body
+        .whereType<Map<String, dynamic>>()
+        .map(RankingUser.fromJson)
+        .toList();
+  }
+}
+
+const String _configuredRankingApiBaseUrl = String.fromEnvironment(
+  'AUTH_API_BASE_URL',
+);
+
+String get _rankingApiBaseUrl {
+  if (_configuredRankingApiBaseUrl.isNotEmpty) {
+    return _configuredRankingApiBaseUrl;
   }
 
-  int _readEcoPoint(Map<String, dynamic> data) {
-    final rawPoint = data['ecoPoint'];
-    if (rawPoint is int) {
-      return rawPoint;
-    }
-    if (rawPoint is num) {
-      return rawPoint.toInt();
-    }
-    return 0;
+  if (Platform.isAndroid) {
+    return 'http://10.0.2.2:8080';
   }
+
+  return 'http://localhost:8080';
 }
