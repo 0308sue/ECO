@@ -34,6 +34,7 @@ backend/src/main/resources/data/*.csv
 **/.dart_tool/
 **/build/
 **/Pods/
+**/.codex-pod-home/
 
 # Flutter
 **/.flutter-plugins
