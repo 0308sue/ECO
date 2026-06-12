@@ -91,13 +91,6 @@ class RankingPage extends StatelessWidget {
           );
         },
       ),
-      bottomNavigationBar: _RankingBottomNavigation(
-        onHomePressed: () {
-          if (Navigator.of(context).canPop()) {
-            Navigator.of(context).pop();
-          }
-        },
-      ),
     );
   }
 
@@ -328,37 +321,6 @@ class _CurrentUserPanel extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _RankingBottomNavigation extends StatelessWidget {
-  const _RankingBottomNavigation({required this.onHomePressed});
-
-  final VoidCallback onHomePressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return NavigationBar(
-      selectedIndex: 0,
-      onDestinationSelected: (index) {
-        if (index == 0) {
-          onHomePressed();
-        }
-      },
-      destinations: const [
-        NavigationDestination(icon: Icon(Icons.home_outlined), label: 'Home'),
-        NavigationDestination(
-          icon: Icon(Icons.receipt_long_outlined),
-          label: 'Ledger',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.photo_camera_outlined),
-          label: 'Scan',
-        ),
-        NavigationDestination(icon: Icon(Icons.map_outlined), label: 'Map'),
-        NavigationDestination(icon: Icon(Icons.person_outline), label: 'My'),
-      ],
     );
   }
 }
