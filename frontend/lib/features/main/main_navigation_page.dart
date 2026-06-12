@@ -6,7 +6,7 @@ import '../ledger/ledger_page.dart';
 import '../receipt/receipt_scan_page.dart';
 import '../place/eco_place_map_page.dart';
 import '../my/my_page.dart';
-import '../../ranking/screen/ranking_page.dart';
+import '../ranking/screen/ranking_page.dart';
 
 class MainNavigationPage extends StatefulWidget {
   const MainNavigationPage({
