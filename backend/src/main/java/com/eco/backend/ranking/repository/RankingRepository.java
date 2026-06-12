@@ -1,9 +1,12 @@
 package com.eco.backend.ranking.repository;
 
+import com.google.cloud.Timestamp;
 import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.QueryDocumentSnapshot;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
@@ -31,12 +34,24 @@ public class RankingRepository {
         }
     }
 
-    public List<QueryDocumentSnapshot> findReceiptsByUserId(String userId) {
+    public List<QueryDocumentSnapshot> findReceiptsByUserId(
+            String userId,
+            Instant startAt,
+            Instant endBefore
+    ) {
         try {
             return firestore
                     .collection("users")
                     .document(userId)
                     .collection("receipts")
+                    .whereGreaterThanOrEqualTo(
+                            "createdAt",
+                            Timestamp.of(Date.from(startAt))
+                    )
+                    .whereLessThan(
+                            "createdAt",
+                            Timestamp.of(Date.from(endBefore))
+                    )
                     .get()
                     .get()
                     .getDocuments();

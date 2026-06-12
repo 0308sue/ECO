@@ -5,6 +5,9 @@ import com.eco.backend.ranking.repository.RankingRepository;
 import com.google.cloud.firestore.QueryDocumentSnapshot;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
+import java.time.YearMonth;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -15,6 +18,7 @@ public class RankingService {
 
     private static final int DEFAULT_LIMIT = 30;
     private static final int MAX_LIMIT = 100;
+    private static final ZoneId RANKING_ZONE = ZoneId.of("Asia/Seoul");
 
     private final RankingRepository rankingRepository;
 
@@ -24,12 +28,13 @@ public class RankingService {
 
     public List<RankingUserResponse> getRankings(Integer requestedLimit) {
         int limit = normalizeLimit(requestedLimit);
+        MonthRange monthRange = currentMonthRange();
         List<QueryDocumentSnapshot> users = rankingRepository.findUsers();
         List<RankingUserResponse> rankings = new ArrayList<>();
 
         for (int i = 0; i < users.size(); i++) {
             QueryDocumentSnapshot user = users.get(i);
-            int ecoPoint = calculateEcoPoints(user.getId());
+            int ecoPoint = calculateEcoPoints(user.getId(), monthRange);
 
             if (ecoPoint <= 0) {
                 continue;
@@ -81,9 +86,13 @@ public class RankingService {
         return "ECO 유저 " + (index + 1);
     }
 
-    private int calculateEcoPoints(String userId) {
+    private int calculateEcoPoints(String userId, MonthRange monthRange) {
         List<QueryDocumentSnapshot> receipts =
-                rankingRepository.findReceiptsByUserId(userId);
+                rankingRepository.findReceiptsByUserId(
+                        userId,
+                        monthRange.startAt(),
+                        monthRange.endBefore()
+                );
         int totalPoint = 0;
 
         for (QueryDocumentSnapshot receipt : receipts) {
@@ -130,5 +139,23 @@ public class RankingService {
             return grade;
         }
         return "Seed";
+    }
+
+    private MonthRange currentMonthRange() {
+        YearMonth currentMonth = YearMonth.now(RANKING_ZONE);
+        Instant startAt = currentMonth
+                .atDay(1)
+                .atStartOfDay(RANKING_ZONE)
+                .toInstant();
+        Instant endBefore = currentMonth
+                .plusMonths(1)
+                .atDay(1)
+                .atStartOfDay(RANKING_ZONE)
+                .toInstant();
+
+        return new MonthRange(startAt, endBefore);
+    }
+
+    private record MonthRange(Instant startAt, Instant endBefore) {
     }
 }
