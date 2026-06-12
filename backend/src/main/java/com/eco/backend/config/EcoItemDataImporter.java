@@ -78,8 +78,8 @@ public class EcoItemDataImporter implements CommandLineRunner {
                 continue;
             }
 
-            String category = inferCategory(productUseName);
-            String subCategory = inferSubCategory(productUseName);
+            String category = inferCategory(productUseName, modelName);
+            String subCategory = inferSubCategory(productUseName, modelName);
             List<String> keywords = inferKeywords(productUseName, modelName);
 
             Map<String, Object> item = new HashMap<>();
@@ -151,7 +151,6 @@ public class EcoItemDataImporter implements CommandLineRunner {
             return false;
         }
 
-        // 우리 서비스와 거리가 먼 산업/건축/원재료성 항목 제외
         List<String> excludeKeywords = List.of(
                 "건축", "콘크리트", "블록", "벽지", "바닥재", "창호",
                 "수도꼭지", "계량기", "등기구", "조명", "가구",
@@ -166,34 +165,56 @@ public class EcoItemDataImporter implements CommandLineRunner {
             }
         }
 
-        // 실제 생활소비/제로웨이스트 추천에 연결 가능한 항목만 포함
         List<String> includeKeywords = List.of(
+                "컵",
+                "다회용 컵",
+                "다회용컵",
+                "리유저블컵",
+                "리유저블 컵",
+                "개인컵",
+                "텀블러",
+                "물병",
+                "보틀",
+
                 "주방용 세제",
                 "세탁용 세제",
                 "섬유유연제",
                 "다목적 세정제",
                 "세정제",
                 "세척제",
+
                 "화장지",
                 "수세용 타월",
                 "수세용 타올",
+                "티슈",
+                "타월",
+                "타올",
+
                 "비누",
                 "샴푸",
                 "린스",
                 "바디클렌저",
+                "바디워시",
                 "탈취제",
                 "방향제",
                 "칫솔",
+
                 "생분해성 식품 용기",
                 "생분해성 식품 기구",
                 "생분해성 용기",
+                "다회용 식품 기구",
+                "다회용 식품 용기",
+                "식품 용기",
+                "식품 기구",
+                "도시락",
+                "포장용기",
+                "접시",
+
                 "생분해성 빨대",
                 "생분해성수지 빨대",
                 "생분해성 포장제품",
                 "생분해성 봉투",
-                "생분해성 쇼핑봉투",
-                "다회용 식품 기구",
-                "다회용 식품 용기"
+                "생분해성 쇼핑봉투"
         );
 
         for (String keyword : includeKeywords) {
@@ -205,19 +226,31 @@ public class EcoItemDataImporter implements CommandLineRunner {
         return false;
     }
 
-    private String inferCategory(String productUseName) {
-        if (productUseName.contains("생분해성")
-                || productUseName.contains("다회용 식품")
-                || productUseName.contains("빨대")
-                || productUseName.contains("용기")
-                || productUseName.contains("봉투")) {
+    private String inferCategory(String productUseName, String modelName) {
+        String text = productUseName + " " + modelName;
+
+        if (containsAny(text, "컵", "텀블러", "리유저블", "개인컵", "물병", "보틀")) {
+            return "음료";
+        }
+
+        if (containsAny(text, "식품 용기", "식품 기구", "다회용 식품", "생분해성 식품", "도시락", "포장용기", "접시")) {
+            return "식품";
+        }
+
+        if (containsAny(text, "빨대", "봉투", "쇼핑봉투", "포장제품")) {
             return "일회용품";
         }
 
         return "생활용품";
     }
 
-    private String inferSubCategory(String productUseName) {
+    private String inferSubCategory(String productUseName, String modelName) {
+        String text = productUseName + " " + modelName;
+
+        if (containsAny(text, "컵", "텀블러", "리유저블", "개인컵", "물병", "보틀")) {
+            return "커피";
+        }
+
         if (productUseName.contains("주방용 세제")) {
             return "주방세제";
         }
@@ -234,11 +267,11 @@ public class EcoItemDataImporter implements CommandLineRunner {
             return "세정제";
         }
 
-        if (productUseName.contains("화장지")) {
+        if (containsAny(text, "화장지", "티슈")) {
             return "화장지류";
         }
 
-        if (productUseName.contains("수세용 타월") || productUseName.contains("수세용 타올")) {
+        if (containsAny(text, "수세용 타월", "수세용 타올", "타월", "타올")) {
             return "수세미/타월";
         }
 
@@ -254,7 +287,7 @@ public class EcoItemDataImporter implements CommandLineRunner {
             return "린스";
         }
 
-        if (productUseName.contains("바디클렌저")) {
+        if (productUseName.contains("바디클렌저") || productUseName.contains("바디워시")) {
             return "바디클렌저";
         }
 
@@ -271,54 +304,116 @@ public class EcoItemDataImporter implements CommandLineRunner {
         }
 
         if (productUseName.contains("빨대")) {
-            return "생분해 빨대";
+            return "빨대";
         }
 
         if (productUseName.contains("봉투") || productUseName.contains("쇼핑봉투")) {
-            return "생분해 봉투";
+            return "봉투";
         }
 
-        if (productUseName.contains("식품 용기") || productUseName.contains("식품 기구") || productUseName.contains("용기")) {
-            return "생분해/다회용 용기";
+        if (containsAny(text, "식품 용기", "식품 기구", "용기", "도시락", "포장용기", "접시")) {
+            return "포장용품";
         }
 
         return "친환경 생활용품";
     }
 
     private List<String> inferKeywords(String productUseName, String modelName) {
-        String subCategory = inferSubCategory(productUseName);
+        String subCategory = inferSubCategory(productUseName, modelName);
 
         return switch (subCategory) {
-            case "주방세제" -> List.of("주방세제", "세제", "설거지", "식기세제");
-            case "세탁세제" -> List.of("세탁세제", "세제", "빨래", "세탁");
-            case "섬유유연제" -> List.of("섬유유연제", "세탁", "빨래");
-            case "세정제" -> List.of("세정제", "세척제", "청소", "클리너");
-            case "화장지류" -> List.of("화장지", "휴지", "두루마리", "티슈");
-            case "수세미/타월" -> List.of("수세미", "수세용타월", "주방타월");
-            case "비누" -> List.of("비누", "고체비누", "세안");
-            case "샴푸" -> List.of("샴푸", "샴푸바", "헤어");
-            case "린스" -> List.of("린스", "컨디셔너", "헤어");
-            case "바디클렌저" -> List.of("바디워시", "바디클렌저", "샤워");
-            case "탈취제" -> List.of("탈취제", "냄새제거");
-            case "방향제" -> List.of("방향제", "디퓨저", "향");
-            case "칫솔" -> List.of("칫솔", "대나무칫솔", "구강용품");
-            case "생분해 빨대" -> List.of("빨대", "일회용빨대", "생분해빨대");
-            case "생분해 봉투" -> List.of("봉투", "비닐봉투", "쇼핑봉투", "생분해봉투");
-            case "생분해/다회용 용기" -> List.of("종이컵", "일회용컵", "일회용용기", "배달용기", "식품용기");
+            case "커피" -> List.of(
+                    "커피", "아메리카노", "라떼", "카페", "음료", "탄산", "주스",
+                    "컵", "일회용컵", "종이컵", "플라스틱컵",
+                    "텀블러", "개인컵", "다회용컵", "리유저블컵", "리유저블",
+                    "보틀", "물병", "용기"
+            );
+
+            case "주방세제" -> List.of(
+                    "주방세제", "세제", "설거지", "식기세제", "리필", "생활용품"
+            );
+
+            case "세탁세제" -> List.of(
+                    "세탁세제", "세제", "빨래", "세탁", "리필", "생활용품"
+            );
+
+            case "섬유유연제" -> List.of(
+                    "섬유유연제", "세탁", "빨래", "세제", "생활용품"
+            );
+
+            case "세정제" -> List.of(
+                    "세정제", "세척제", "청소", "클리너", "생활용품"
+            );
+
+            case "화장지류" -> List.of(
+                    "물티슈", "화장지", "휴지", "두루마리", "티슈", "키친타월", "생활용품"
+            );
+
+            case "수세미/타월" -> List.of(
+                    "수세미", "수세용타월", "수세용타올", "주방타월", "행주", "타월", "생활용품"
+            );
+
+            case "비누" -> List.of(
+                    "비누", "고체비누", "세안", "샴푸바", "생활용품"
+            );
+
+            case "샴푸" -> List.of(
+                    "샴푸", "샴푸바", "헤어", "욕실용품", "생활용품"
+            );
+
+            case "린스" -> List.of(
+                    "린스", "컨디셔너", "헤어", "욕실용품", "생활용품"
+            );
+
+            case "바디클렌저" -> List.of(
+                    "바디워시", "바디클렌저", "샤워", "욕실용품", "생활용품"
+            );
+
+            case "탈취제" -> List.of(
+                    "탈취제", "냄새제거", "생활용품"
+            );
+
+            case "방향제" -> List.of(
+                    "방향제", "디퓨저", "향", "생활용품"
+            );
+
+            case "칫솔" -> List.of(
+                    "칫솔", "대나무칫솔", "구강용품", "생활용품"
+            );
+
+            case "빨대" -> List.of(
+                    "빨대", "일회용빨대", "생분해빨대", "음료", "카페", "커피"
+            );
+
+            case "봉투" -> List.of(
+                    "봉투", "비닐봉투", "쇼핑봉투", "생분해봉투",
+                    "장바구니", "에코백", "가방", "마트", "장보기"
+            );
+
+            case "포장용품" -> List.of(
+                    "식품", "음식", "포장", "배달", "도시락", "식품용기", "포장용기",
+                    "다회용기", "일회용용기", "생분해용기",
+                    "햄버거", "버거", "김밥", "치킨", "피자", "샌드위치", "용기", "접시"
+            );
+
             default -> Arrays.asList(productUseName, modelName);
         };
     }
 
     private String makeReason(String subCategory) {
         return switch (subCategory) {
+            case "커피" ->
+                    "커피나 음료 구매 시 일회용 컵 사용을 줄일 수 있는 다회용 컵 계열 제품입니다.";
             case "주방세제", "세탁세제", "섬유유연제", "세정제" ->
                     "환경표지 인증 제품을 선택하면 생활용품 사용 과정의 환경 부담을 줄이는 데 도움이 됩니다.";
             case "화장지류" ->
                     "환경표지 인증 화장지 제품을 선택하면 자원 사용과 환경 부담을 줄이는 데 도움이 됩니다.";
             case "샴푸", "린스", "바디클렌저", "비누" ->
                     "환경표지 인증 세정·위생 제품을 선택하면 일상 소비의 환경 영향을 줄이는 데 도움이 됩니다.";
-            case "생분해 빨대", "생분해 봉투", "생분해/다회용 용기" ->
-                    "일회용품 사용이 필요한 경우 생분해성 또는 다회용 인증 제품을 선택할 수 있습니다.";
+            case "포장용품" ->
+                    "음식 포장이나 배달 소비에서 일회용 포장재 사용을 줄이는 데 도움이 되는 제품입니다.";
+            case "빨대", "봉투" ->
+                    "일회용품 사용이 필요한 경우 생분해성 또는 재사용 가능한 대체 제품을 선택할 수 있습니다.";
             default ->
                     "환경표지 인증을 받은 제품으로 일반 제품보다 환경성을 고려한 선택입니다.";
         };
@@ -326,14 +421,18 @@ public class EcoItemDataImporter implements CommandLineRunner {
 
     private String makeTip(String subCategory) {
         return switch (subCategory) {
+            case "커피" ->
+                    "카페 이용 시 텀블러나 개인컵 사용 가능 여부를 함께 확인해보세요.";
             case "주방세제", "세탁세제", "섬유유연제", "세정제" ->
                     "같은 용도의 제품을 구매할 때 환경표지 인증 여부를 확인해보세요.";
             case "화장지류" ->
                     "휴지나 화장지를 구매할 때 인증 제품을 우선 선택해보세요.";
             case "샴푸", "린스", "바디클렌저", "비누" ->
                     "욕실용품은 리필 제품이나 고체형 제품과 함께 비교해보면 좋습니다.";
-            case "생분해 빨대", "생분해 봉투", "생분해/다회용 용기" ->
-                    "가능하면 다회용 제품을 먼저 사용하고, 불가피할 때 생분해성 제품을 선택해보세요.";
+            case "포장용품" ->
+                    "포장 음식 구매 시 다회용기 사용 가능 여부를 먼저 확인해보세요.";
+            case "빨대", "봉투" ->
+                    "가능하면 다회용 제품을 먼저 사용하고, 불가피할 때 대체 제품을 선택해보세요.";
             default ->
                     "구매 전 인증 정보와 제품 용도를 확인해보세요.";
         };
@@ -343,5 +442,19 @@ public class EcoItemDataImporter implements CommandLineRunner {
         String raw = certificationNo + "|" + modelName + "|" + companyName;
         String uuid = UUID.nameUUIDFromBytes(raw.getBytes(StandardCharsets.UTF_8)).toString();
         return "green_" + uuid;
+    }
+
+    private boolean containsAny(String text, String... keywords) {
+        if (text == null || text.isBlank()) {
+            return false;
+        }
+
+        for (String keyword : keywords) {
+            if (text.contains(keyword)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

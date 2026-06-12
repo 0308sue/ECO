@@ -11,9 +11,11 @@ import com.eco.backend.recommendation.rule.RecommendationRule;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @Service
@@ -28,7 +30,6 @@ public class RecommendationService {
     }
 
     private final List<RecommendationRule> rules = List.of(
-            // 음료 전체
             new RecommendationRule(
                     "음료",
                     null,
@@ -38,7 +39,6 @@ public class RecommendationService {
                     "음료 소비가 있어 일회용 컵과 플라스틱병 사용을 줄일 수 있는 텀블러를 추천합니다."
             ),
 
-            // 커피 전용
             new RecommendationRule(
                     "음료",
                     "커피",
@@ -48,7 +48,6 @@ public class RecommendationService {
                     "커피 소비가 있어 일회용 컵 대신 텀블러나 개인컵 사용을 추천합니다."
             ),
 
-            // 식품/음식 전체
             new RecommendationRule(
                     "식품",
                     null,
@@ -58,7 +57,6 @@ public class RecommendationService {
                     "음식 구매 시 일회용 포장재를 줄일 수 있도록 다회용기 사용을 추천합니다."
             ),
 
-            // 패스트푸드/포장 음식
             new RecommendationRule(
                     "식품",
                     "패스트푸드",
@@ -68,7 +66,6 @@ public class RecommendationService {
                     "패스트푸드나 포장 음식은 일회용 포장재가 많이 발생할 수 있어 다회용기 사용을 추천합니다."
             ),
 
-            // 일회용품
             new RecommendationRule(
                     "일회용품",
                     "일회용컵",
@@ -78,7 +75,6 @@ public class RecommendationService {
                     "일회용 컵이나 일회용품 대신 텀블러와 다회용품 사용을 추천합니다."
             ),
 
-            // 물티슈
             new RecommendationRule(
                     "생활용품",
                     "화장지류",
@@ -88,7 +84,6 @@ public class RecommendationService {
                     "물티슈 대신 손수건이나 다회용 행주 사용을 추천합니다."
             ),
 
-            // 생활용품 - 샴푸/린스
             new RecommendationRule(
                     "생활용품",
                     null,
@@ -98,7 +93,6 @@ public class RecommendationService {
                     "샴푸바는 플라스틱 용기 사용을 줄일 수 있는 대체 생활용품입니다."
             ),
 
-            // 생활용품 - 세제
             new RecommendationRule(
                     "생활용품",
                     null,
@@ -108,7 +102,6 @@ public class RecommendationService {
                     "세제 리필을 이용하면 새 플라스틱 용기 구매를 줄일 수 있습니다."
             ),
 
-            // 장보기/봉투
             new RecommendationRule(
                     null,
                     null,
@@ -118,7 +111,6 @@ public class RecommendationService {
                     "비닐봉투 사용을 줄이기 위해 장바구니 사용을 추천합니다."
             ),
 
-            // 전자/배터리
             new RecommendationRule(
                     null,
                     null,
@@ -128,7 +120,6 @@ public class RecommendationService {
                     "충전지나 재사용 가능한 전자제품을 사용하면 반복 구매와 폐기물 발생을 줄일 수 있습니다."
             ),
 
-            // 기타 fallback용
             new RecommendationRule(
                     "기타",
                     null,
@@ -148,12 +139,9 @@ public class RecommendationService {
 
         List<RecommendedItemResponse> dbRecommendedItems = recommendItemsFromDb(request);
 
-
         if (!dbRecommendedItems.isEmpty()) {
             return dbRecommendedItems;
         }
-
-
 
         return recommendItemsByRuleFallback(request);
     }
@@ -170,7 +158,6 @@ public class RecommendationService {
     private List<RecommendedItemResponse> recommendItemsFromDb(RecommendationRequest request) {
         try {
             List<EcoItem> ecoItems = ecoRecommendationRepository.findAllActiveEcoItems();
-
 
             if (ecoItems == null || ecoItems.isEmpty()) {
                 return new ArrayList<>();
@@ -191,7 +178,10 @@ public class RecommendationService {
                     .toList();
 
             List<RecommendedItemResponse> responses = new ArrayList<>();
-            Set<String> addedItemNames = new HashSet<>();
+
+            Map<String, Integer> familyCountMap = new HashMap<>();
+            Set<String> familyCompanySet = new HashSet<>();
+            Set<String> exactNameSet = new HashSet<>();
 
             for (ScoredEcoItem scoredItem : sortedItems) {
                 EcoItem ecoItem = scoredItem.ecoItem();
@@ -200,9 +190,33 @@ public class RecommendationService {
                     continue;
                 }
 
-                if (!addedItemNames.add(ecoItem.getName())) {
+                String nameKey = simplifyText(ecoItem.getName());
+                String familyKey = buildEcoItemFamilyKey(ecoItem);
+                String companyKey = simplifyText(ecoItem.getCompanyName());
+                String familyCompanyKey = familyKey + "|" + companyKey;
+
+                if (exactNameSet.contains(nameKey)) {
                     continue;
                 }
+
+                int familyLimit = getFamilyLimit(familyKey);
+                int familyCount = familyCountMap.getOrDefault(familyKey, 0);
+
+                if (familyCount >= familyLimit) {
+                    continue;
+                }
+
+                if (!companyKey.isBlank() && familyCompanySet.contains(familyCompanyKey)) {
+                    continue;
+                }
+
+                exactNameSet.add(nameKey);
+
+                if (!companyKey.isBlank()) {
+                    familyCompanySet.add(familyCompanyKey);
+                }
+
+                familyCountMap.put(familyKey, familyCount + 1);
 
                 responses.add(toRecommendedItemResponse(
                         ecoItem,
@@ -232,6 +246,7 @@ public class RecommendationService {
             if (receiptItem == null) {
                 continue;
             }
+
             String matchName = getMatchName(receiptItem);
 
             RecommendationRule matchedRule = findMatchedRuleOnly(
@@ -272,34 +287,28 @@ public class RecommendationService {
     ) {
         int score = 0;
 
-        // DB의 targetCategories가 있으면 우선 사용
         if (containsExact(ecoItem.getTargetCategories(), receiptItem.category())) {
             score += 4;
         }
 
-        // 현재 DB 구조의 category 직접 매칭
         if (sameText(ecoItem.getCategory(), receiptItem.category())) {
             score += 4;
         }
 
-        // DB의 targetSubCategories가 있으면 우선 사용
         if (containsExact(ecoItem.getTargetSubCategories(), receiptItem.subCategory())) {
             score += 3;
         }
 
-        // 현재 DB 구조의 subCategory 직접 매칭
         if (sameText(ecoItem.getSubCategory(), receiptItem.subCategory())) {
             score += 3;
         }
 
         String receiptText = buildReceiptText(receiptItem, matchName);
 
-        // DB의 targetKeywords 매칭
         if (containsAnyKeyword(ecoItem.getTargetKeywords(), receiptText)) {
             score += 3;
         }
 
-        // 현재 DB 구조의 keywords 매칭
         if (containsAnyKeyword(ecoItem.getKeywords(), receiptText)) {
             score += 3;
         }
@@ -315,6 +324,10 @@ public class RecommendationService {
                 score += 1;
             }
 
+            if (containsAnyKeyword(buildRecommendationSearchKeywords(matchedRule), ecoItemText)) {
+                score += 3;
+            }
+
             if (containsExact(ecoItem.getRelatedPlaceTypes(), matchedRule.placeType())) {
                 score += 1;
             }
@@ -325,6 +338,39 @@ public class RecommendationService {
         }
 
         return score;
+    }
+
+    private List<String> buildRecommendationSearchKeywords(RecommendationRule matchedRule) {
+        if (matchedRule == null || matchedRule.recommendedItem() == null) {
+            return List.of();
+        }
+
+        return switch (matchedRule.recommendedItem()) {
+            case "텀블러" -> List.of(
+                    "텀블러", "컵", "개인컵", "다회용컵", "다회용", "리유저블컵",
+                    "리유저블", "보틀", "물병", "빨대", "음료", "커피", "카페"
+            );
+            case "다회용기" -> List.of(
+                    "다회용기", "용기", "도시락", "밀폐용기", "보관용기",
+                    "식품용기", "포장용기", "포장", "배달", "접시"
+            );
+            case "손수건" -> List.of(
+                    "손수건", "행주", "타월", "타올", "수건", "티슈", "화장지", "휴지", "물티슈"
+            );
+            case "샴푸바" -> List.of(
+                    "샴푸", "샴푸바", "비누", "고체비누", "바디워시", "바디클렌저", "린스"
+            );
+            case "세제 리필" -> List.of(
+                    "세제", "주방세제", "세탁세제", "리필", "섬유유연제", "세정제", "세척제"
+            );
+            case "장바구니" -> List.of(
+                    "장바구니", "에코백", "가방", "쇼핑백", "봉투", "비닐봉투"
+            );
+            case "충전지" -> List.of(
+                    "충전지", "건전지", "배터리", "충전", "전지"
+            );
+            default -> List.of(matchedRule.recommendedItem());
+        };
     }
 
     private RecommendedItemResponse toRecommendedItemResponse(
@@ -373,6 +419,7 @@ public class RecommendationService {
             if (receiptItem == null) {
                 continue;
             }
+
             String matchName = getMatchName(receiptItem);
             String category = receiptItem.category();
             String subCategory = receiptItem.subCategory();
@@ -401,7 +448,6 @@ public class RecommendationService {
         return responses;
     }
 
-
     public List<RecommendedPlaceResponse> recommendPlaces(RecommendationRequest request) {
         List<RecommendedPlaceResponse> responses = new ArrayList<>();
 
@@ -409,6 +455,10 @@ public class RecommendationService {
 
         if (request != null && request.items() != null && !request.items().isEmpty()) {
             for (ReceiptItem receiptItem : request.items()) {
+                if (receiptItem == null) {
+                    continue;
+                }
+
                 String matchName = getMatchName(receiptItem);
                 String category = receiptItem.category();
                 String subCategory = receiptItem.subCategory();
@@ -421,12 +471,9 @@ public class RecommendationService {
             }
         }
 
-        // 장소도 빈 배열 방지
         if (requiredPlaceTypes.isEmpty()) {
             requiredPlaceTypes.add(DEFAULT_PLACE_TYPE);
         }
-
-        // System.out.println("[최종 추천 장소 타입] " + requiredPlaceTypes);
 
         for (String placeType : requiredPlaceTypes) {
             addRecommendedPlacesFromDb(responses, placeType);
@@ -491,7 +538,6 @@ public class RecommendationService {
             List<EcoItem> ecoItems =
                     ecoRecommendationRepository.findActiveEcoItemsByName(rule.recommendedItem());
 
-            // DB에 실제 제품 후보가 없어도 rule 기반 추천은 반환
             if (ecoItems == null || ecoItems.isEmpty()) {
                 responses.add(new RecommendedItemResponse(
                         receiptItem.originalName(),
@@ -680,6 +726,80 @@ public class RecommendationService {
 
     private String nullToEmpty(String value) {
         return value == null ? "" : value;
+    }
+
+    private int getFamilyLimit(String familyKey) {
+        if (familyKey.contains("cup")) {
+            return 3;
+        }
+
+        if (familyKey.contains("container")) {
+            return 2;
+        }
+
+        if (familyKey.contains("detergent")) {
+            return 2;
+        }
+
+        return 2;
+    }
+
+    private String buildEcoItemFamilyKey(EcoItem ecoItem) {
+        String name = nullToEmpty(ecoItem.getName());
+        String productUseName = nullToEmpty(ecoItem.getProductUseName());
+        String subCategory = nullToEmpty(ecoItem.getSubCategory());
+
+        String text = normalizeEcoItemName(name + " " + productUseName);
+
+        if (text.contains("리유저블") || text.contains("텀블러") || text.contains("컵")
+                || text.contains("보틀") || text.contains("물병")) {
+            return subCategory + "|cup";
+        }
+
+        if (text.contains("빨대")) {
+            return subCategory + "|straw";
+        }
+
+        if (text.contains("세제") || text.contains("세정제") || text.contains("세척제")) {
+            return subCategory + "|detergent";
+        }
+
+        if (text.contains("화장지") || text.contains("휴지") || text.contains("티슈")
+                || text.contains("타월") || text.contains("타올")) {
+            return subCategory + "|tissue";
+        }
+
+        if (text.contains("용기") || text.contains("도시락") || text.contains("접시")) {
+            return subCategory + "|container";
+        }
+
+        if (text.contains("봉투") || text.contains("가방") || text.contains("쇼핑백")) {
+            return subCategory + "|bag";
+        }
+
+        if (text.contains("샴푸") || text.contains("린스") || text.contains("비누")
+                || text.contains("바디")) {
+            return subCategory + "|bath";
+        }
+
+        return subCategory + "|" + simplifyText(text);
+    }
+
+    private String normalizeEcoItemName(String value) {
+        return nullToEmpty(value)
+                .replaceAll("\\([^)]*\\)", " ")
+                .replaceAll("\\[[^]]*\\]", " ")
+                .replaceAll("[0-9]+(ml|ML|l|L|oz|g|kg|매|개|입|p|P)?", " ")
+                .replaceAll("[A-Za-z]{1,5}[-_]*[0-9]+", " ")
+                .replaceAll("[^가-힣a-zA-Z0-9]", " ")
+                .replaceAll("\\s+", " ")
+                .trim();
+    }
+
+    private String simplifyText(String value) {
+        return nullToEmpty(value)
+                .replaceAll("\\s+", "")
+                .trim();
     }
 
     private String getMatchName(ReceiptItem item) {

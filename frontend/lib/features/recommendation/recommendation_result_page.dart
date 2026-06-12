@@ -69,10 +69,14 @@ class _RecommendationResultPageState extends State<RecommendationResultPage> {
       final itemBody = utf8.decode(itemResponse.bodyBytes);
       final placeBody = utf8.decode(placeResponse.bodyBytes);
 
+      debugPrint('추천 아이템 응답 status: ${itemResponse.statusCode}');
+      debugPrint('추천 아이템 응답 body: $itemBody');
+
       if (itemResponse.statusCode >= 200 && itemResponse.statusCode < 300) {
         final decodedItems = jsonDecode(itemBody);
         if (decodedItems is List) {
           _recommendedItems = decodedItems;
+          debugPrint('추천 아이템 개수: ${_recommendedItems.length}');
         }
       } else {
         _showMessage('추천 아이템 조회 실패: ${itemResponse.statusCode}');
@@ -226,7 +230,6 @@ class _RecommendationResultPageState extends State<RecommendationResultPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('구매 품목: $originalItem'),
                     Text(
                       '추천: $recommendedItem',
                       style: const TextStyle(fontWeight: FontWeight.bold),
