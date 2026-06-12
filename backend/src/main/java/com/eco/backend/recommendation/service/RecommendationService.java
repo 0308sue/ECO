@@ -370,6 +370,9 @@ public class RecommendationService {
         Set<String> addedRecommendedItems = new HashSet<>();
 
         for (ReceiptItem receiptItem : request.items()) {
+            if (receiptItem == null) {
+                continue;
+            }
             String matchName = getMatchName(receiptItem);
             String category = receiptItem.category();
             String subCategory = receiptItem.subCategory();
@@ -411,11 +414,6 @@ public class RecommendationService {
                 String subCategory = receiptItem.subCategory();
 
                 RecommendationRule matchedRule = findMatchedRuleOnly(matchName, category, subCategory);
-
-                // System.out.println("[추천 장소 타입 매칭] item=" + matchName
-                //        + ", category=" + category
-                //        + ", subCategory=" + subCategory
-                //        + ", placeType=" + (matchedRule == null ? "null" : matchedRule.placeType()));
 
                 if (matchedRule != null && !requiredPlaceTypes.contains(matchedRule.placeType())) {
                     requiredPlaceTypes.add(matchedRule.placeType());
