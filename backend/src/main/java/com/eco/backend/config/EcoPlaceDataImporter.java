@@ -126,22 +126,35 @@ public class EcoPlaceDataImporter implements CommandLineRunner {
     }
 
     private String inferType(String name, String memo) {
-        String text = name + " " + memo;
+        String text = ((name == null ? "" : name) + " " + (memo == null ? "" : memo))
+                .toLowerCase();
 
-        if (text.contains("리필") || text.contains("소분") || text.contains("알맹")) {
-            return "리필샵";
+        if (containsAny(text, "리필", "소분", "알맹", "refill", "정기리필", "방문리필")) {
+            return "리필스테이션";
         }
 
-        if (text.contains("재활용") || text.contains("자원순환") || text.contains("새활용")) {
-            return "재활용매장";
+        if (containsAny(text, "카페", "커피", "coffee", "요거트", "디저트", "찻집", "티하우스")) {
+            return "친환경카페";
         }
 
-        if (text.contains("중고") || text.contains("아름다운가게") || text.contains("굿윌")) {
-            return "중고매장";
+        if (containsAny(text, "식당", "반찬", "음식", "푸드", "도시락", "비건식당", "밥집", "분식", "레스토랑", "키친", "버거", "샌드위치")) {
+            return "친환경식당";
         }
 
-        if (text.contains("식당") || text.contains("카페")) {
-            return "친환경매장";
+        if (containsAny(text, "빵", "베이커리", "비건베이커리", "제과", "우리밀")) {
+            return "친환경식당";
+        }
+
+        if (containsAny(text, "농산물", "로컬푸드", "무포장", "마켓", "생협", "한살림", "두레생협", "자연드림", "초록마을")) {
+            return "로컬푸드/무포장마켓";
+        }
+
+        if (containsAny(text, "재활용", "자원순환", "리사이클", "분리", "종이팩", "건전지", "수거", "되살림", "리워드", "새활용", "아름다운가게", "굿윌")) {
+            return "재활용센터/자원순환가게";
+        }
+
+        if (containsAny(text, "공방", "체험", "클래스", "제작", "워크숍", "워크샵")) {
+            return "공방/체험";
         }
 
         return "제로웨이스트샵";
@@ -149,11 +162,22 @@ public class EcoPlaceDataImporter implements CommandLineRunner {
 
     private List<String> inferAvailableItems(String type) {
         return switch (type) {
-            case "리필샵" -> List.of("세제", "샴푸", "화장품", "비누", "용기");
-            case "재활용매장" -> List.of("재활용품", "새활용품");
-            case "중고매장" -> List.of("의류", "생활용품", "중고제품");
-            case "친환경매장" -> List.of("친환경 제품", "다회용품");
+            case "친환경카페" -> List.of("텀블러", "다회용컵", "개인컵", "음료");
+            case "친환경식당" -> List.of("다회용기", "도시락통", "포장재 절감", "비건식품");
+            case "리필스테이션" -> List.of("세제", "샴푸", "린스", "바디워시", "화장품", "용기");
+            case "로컬푸드/무포장마켓" -> List.of("장바구니", "무포장 식품", "로컬푸드", "농산물");
+            case "재활용센터/자원순환가게" -> List.of("재활용품", "새활용품", "종이팩", "폐건전지", "중고제품");
+            case "공방/체험" -> List.of("업사이클 체험", "친환경 클래스", "재사용 제품");
             default -> List.of("텀블러", "장바구니", "샴푸바", "고체비누", "다회용품");
         };
+    }
+
+    private boolean containsAny(String text, String... keywords) {
+        for (String keyword : keywords) {
+            if (text.contains(keyword)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

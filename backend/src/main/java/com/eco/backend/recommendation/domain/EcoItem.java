@@ -20,6 +20,11 @@ public class EcoItem {
     private String certificationNo;
     private String certificationType;
 
+    private String subCategory;
+    private List<String> keywords;
+    private String productUseName;
+    private String usage;
+
     public EcoItem() {
     }
 
@@ -142,4 +147,37 @@ public class EcoItem {
     public void setCertificationType(String certificationType) {
         this.certificationType = certificationType;
     }
+
+    public String getSubCategory() {
+        return subCategory;
+    }
+
+    public List<String> getKeywords() {
+        return keywords;
+    }
+
+    public String getProductUseName() {
+        return productUseName;
+    }
+
+    public String getUsage() {
+        return usage;
+    }
+
+    public void setSubCategory(String subCategory) {
+        this.subCategory = subCategory;
+    }
+
+    public void setKeywords(List<String> keywords) {
+        this.keywords = keywords;
+    }
+
+    public void setProductUseName(String productUseName) {
+        this.productUseName = productUseName;
+    }
+
+    public void setUsage(String usage) {
+        this.usage = usage;
+    }
+
 }
