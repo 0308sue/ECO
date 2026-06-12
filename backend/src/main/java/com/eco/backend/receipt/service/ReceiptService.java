@@ -59,6 +59,8 @@ public class ReceiptService {
             };
         }
 
+        lineItems = mergeSpecialCarbonItems(lineItems, lines);
+
         List<ReceiptItemAnalysisResponse> analyzedItems = lineItems.stream()
                 .map(this::analyzeLineItem)
                 .toList();
@@ -111,7 +113,8 @@ public class ReceiptService {
 
         List<ReceiptItemAnalysisResponse> analyzedItems = request.getItems().stream()
                 .filter(item -> item.getName() != null && !item.getName().trim().isEmpty())
-                .filter(item -> item.getPrice() != null && item.getPrice() > 0)
+                .filter(item -> item.getPrice() != null
+                        && (item.getPrice() > 0 || isSpecialCarbonLine(item.getName())))
                 .map(item -> analyzeLineItem(
                         new ReceiptLineItem(
                                 item.getName().trim(),
@@ -1065,6 +1068,91 @@ public class ReceiptService {
         }
 
         return cleaned;
+    }
+
+        private List<ReceiptLineItem> mergeSpecialCarbonItems(
+            List<ReceiptLineItem> items,
+            List<String> lines
+    ) {
+        List<ReceiptLineItem> merged = new ArrayList<>(items);
+
+        for (String line : lines) {
+            if (!isSpecialCarbonLine(line)) {
+                continue;
+            }
+
+            ReceiptLineItem item = parseSpecialCarbonLine(line);
+
+            if (item != null) {
+                merged.add(item);
+            }
+        }
+
+        return removeDuplicateItems(merged);
+    }
+
+    private ReceiptLineItem parseSpecialCarbonLine(String line) {
+        if (isNegativeDisposableOption(line)) {
+            return null;
+        }
+
+        Integer price = extractPrice(line);
+
+        if (price == null) {
+            price = 0;
+        }
+
+        if (price > 300_000) {
+            return null;
+        }
+
+        String itemName = cleanItemName(removeLastPrice(line).trim());
+
+        if (itemName.isBlank()) {
+            return null;
+        }
+
+        return new ReceiptLineItem(itemName, price);
+    }
+
+    private boolean isSpecialCarbonLine(String line) {
+        if (line == null) {
+            return false;
+        }
+
+        String normalized = line.replaceAll("\\s+", "");
+
+        return normalized.contains("배달팁")
+                || normalized.contains("배달비")
+                || normalized.contains("배달료")
+                || normalized.contains("배달요금")
+                || normalized.contains("배달수수료")
+                || normalized.contains("배달대행료")
+                || normalized.contains("포장비")
+                || normalized.contains("포장용기")
+                || normalized.contains("배달용기")
+                || normalized.contains("포장봉투")
+                || normalized.contains("배달봉투")
+                || normalized.contains("일회용수저")
+                || normalized.contains("일회용숟가락")
+                || normalized.contains("일회용젓가락")
+                || normalized.contains("나무젓가락");
+    }
+
+    private boolean isNegativeDisposableOption(String line) {
+        if (line == null) {
+            return false;
+        }
+
+        String normalized = line.replaceAll("\\s+", "");
+
+        return normalized.contains("안받")
+                || normalized.contains("안받기")
+                || normalized.contains("받지않")
+                || normalized.contains("선택안함")
+                || normalized.contains("미제공")
+                || normalized.contains("제외")
+                || normalized.contains("없음");
     }
 
     private List<ReceiptLineItem> removeDuplicateItems(List<ReceiptLineItem> items) {
