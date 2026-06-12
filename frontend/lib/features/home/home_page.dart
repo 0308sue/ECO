@@ -1,18 +1,16 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-import '../ledger/ledger_page.dart';
-import '../receipt/receipt_scan_page.dart';
-import '../place/eco_place_map_page.dart';
-import '../my/my_page.dart';
-
-class HomePage extends StatefulWidget {
+class HomePage extends StatelessWidget {
   const HomePage({
     super.key,
     required this.userId,
+    required this.onTapScan,
+    required this.onTapEcoPlaceMap,
   });
 
   final String userId;
+  final VoidCallback onTapScan;
+  final VoidCallback onTapEcoPlaceMap;
 
   static const Color backgroundColor = Color(0xFFF7FAF2);
   static const Color primaryColor = Color(0xFF3B713B);
@@ -21,70 +19,10 @@ class HomePage extends StatefulWidget {
   static const Color cardColor = Color(0xFFFFFFFF);
 
   @override
-  State<HomePage> createState() => _HomePageState();
-}
-
-class _HomePageState extends State<HomePage> {
-  int _currentIndex = 0;
-
-  void _moveTab(int index) {
-    setState(() {
-      _currentIndex = index;
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
-
-    final pages = [
-      _buildHomeBody(context),
-      LedgerPage(
-        userId: widget.userId,
-        onTapScan: () {
-          _moveTab(2);
-        },
-      ),
-      ReceiptScanPage(userId: widget.userId),
-      const EcoPlaceMapPage(),
-      user == null ? const _LoginMissingPage() : MyPage(user: user),
-    ];
-
-    return Scaffold(
-      backgroundColor: HomePage.backgroundColor,
-      body: IndexedStack(
-        index: _currentIndex,
-        children: pages,
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        selectedItemColor: HomePage.primaryColor,
-        unselectedItemColor: Colors.grey,
-        type: BottomNavigationBarType.fixed,
-        onTap: _moveTab,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_rounded),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.receipt_long_rounded),
-            label: 'Ledger',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.camera_alt_outlined),
-            label: 'Scan',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.map_outlined),
-            label: 'Map',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            label: 'My',
-          ),
-        ],
-      ),
+    return Container(
+      color: backgroundColor,
+      child: _buildHomeBody(context),
     );
   }
 
@@ -97,20 +35,15 @@ class _HomePageState extends State<HomePage> {
           children: [
             _buildTopArea(),
             const SizedBox(height: 28),
-
             _buildMainActionButton(
               icon: Icons.document_scanner_rounded,
               title: '영수증 OCR 분석하기',
               subtitle: '영수증을 촬영하고 탄소 점수를 확인해보세요.',
-              onTap: () {
-                _moveTab(2);
-              },
+              onTap: onTapScan,
             ),
-
             const SizedBox(height: 28),
             _buildSectionTitle('친환경 추천'),
             const SizedBox(height: 12),
-
             _FeatureTile(
               icon: Icons.shopping_bag_rounded,
               title: '대체품 추천 보기',
@@ -120,14 +53,11 @@ class _HomePageState extends State<HomePage> {
               },
             ),
             const SizedBox(height: 12),
-
             _FeatureTile(
               icon: Icons.map_rounded,
               title: '주변 친환경 장소 보기',
               subtitle: '제로웨이스트샵, 리필샵 등 주변 장소를 확인해요.',
-              onTap: () {
-                _moveTab(3);
-              },
+              onTap: onTapEcoPlaceMap,
             ),
           ],
         ),
@@ -342,29 +272,6 @@ class _FeatureTile extends StatelessWidget {
                 size: 28,
               ),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _LoginMissingPage extends StatelessWidget {
-  const _LoginMissingPage();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      backgroundColor: HomePage.backgroundColor,
-      body: SafeArea(
-        child: Center(
-          child: Text(
-            '로그인 정보가 없습니다.',
-            style: TextStyle(
-              fontSize: 18,
-              color: HomePage.subTextColor,
-              fontWeight: FontWeight.w600,
-            ),
           ),
         ),
       ),

@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../auth/nickname_setup_page.dart';
-import '../home/home_page.dart';
+import '../main/main_navigation_page.dart';
 import 'user_profile_service.dart';
 
 class UserProfileGate extends StatelessWidget {
@@ -37,7 +37,7 @@ class UserProfileGate extends StatelessWidget {
           return NicknameSetupPage(user: user);
         }
 
-        return HomePage(userId: user.uid);
+        return MainNavigationPage(user: user);
       },
     );
   }
