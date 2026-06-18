@@ -52,7 +52,7 @@ class _MyPageState extends State<MyPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('ECO 마이페이지')),
+      backgroundColor: _MyPageColors.background,
       body: FutureBuilder<_MyPageData>(
         future: _myPageFuture,
         builder: (context, snapshot) {
@@ -72,85 +72,70 @@ class _MyPageState extends State<MyPage> {
 
           final data = snapshot.data ?? _MyPageData.empty(widget.user.email);
 
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
-            children: [
-              Text(
-                '${data.nickname}님',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 18),
-              _SummaryCard(ecoPoint: data.ecoPoint, grade: data.grade),
-              const SizedBox(height: 14),
-              _SectionCard(
-                title: '획득 배지',
-                icon: Icons.emoji_events_rounded,
-                child: _BadgeList(badges: data.badges),
-              ),
-              const SizedBox(height: 14),
-              _SectionCard(
-                title: '내 활동 통계',
-                icon: Icons.bar_chart_rounded,
-                child: Column(
+          return SafeArea(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 26, 16, 32),
+              children: [
+                const _MyPageHeader(),
+                const SizedBox(height: 24),
+                _CarbonHeroCard(data: data),
+                const SizedBox(height: 18),
+                Row(
                   children: [
-                    _StatRow(
-                      label: '누적 영수증 분석 횟수',
-                      value: '${data.receiptAnalysisCount}회',
+                    Expanded(
+                      child: _MiniInfoCard(
+                        icon: Icons.workspace_premium_rounded,
+                        title: '등급',
+                        value: data.grade,
+                        helper: '${data.nickname}님의 현재 레벨',
+                      ),
                     ),
-                    _StatRow(
-                      label: '누적 절감 점수',
-                      value: '${data.totalSavedScore}점',
-                    ),
-                    _StatRow(
-                      label: '가장 많이 소비한 카테고리',
-                      value: data.mostConsumedCategory,
-                    ),
-                    _StatRow(
-                      label: '이번 달 친환경 소비 횟수',
-                      value: '${data.monthlyEcoConsumptionCount}회',
-                    ),
-                    _RankingMessage(message: data.rankingMessage),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 14),
-              _SectionCard(
-                title: '계정',
-                icon: Icons.manage_accounts_rounded,
-                child: Column(
-                  children: [
-                    _AccountButton(
-                      icon: Icons.person_outline_rounded,
-                      label: '회원 정보',
-                      onTap: () =>
-                          _showUserInfo(context, data.nickname, data.email),
-                    ),
-                    const Divider(height: 18),
-                    _AccountButton(
-                      icon: Icons.no_accounts_outlined,
-                      label: '회원 탈퇴',
-                      onTap: () => _confirmDeleteAccount(context),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: _MiniInfoCard(
+                        icon: Icons.eco_rounded,
+                        title: '이번 달 친환경 소비',
+                        value: '${data.monthlyEcoConsumptionCount}회',
+                        helper: '이번 달 실천 기록',
+                      ),
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 28),
-              FilledButton.icon(
-                onPressed: () => _signOut(context),
-                style: FilledButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.error,
-                  foregroundColor: Theme.of(context).colorScheme.onError,
-                  minimumSize: const Size.fromHeight(52),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                const SizedBox(height: 28),
+                _SectionHeader(
+                  title: '획득 배지',
+                  trailing: '${data.badges.length}개',
+                ),
+                const SizedBox(height: 12),
+                _BadgeList(badges: data.badges),
+                const SizedBox(height: 28),
+                const _SectionHeader(title: '내 활동 통계'),
+                const SizedBox(height: 12),
+                _StatsPanel(data: data),
+                const SizedBox(height: 28),
+                const _SectionHeader(title: '계정'),
+                const SizedBox(height: 12),
+                _AccountPanel(
+                  onUserInfoTap: () =>
+                      _showUserInfo(context, data.nickname, data.email),
+                  onDeleteTap: () => _confirmDeleteAccount(context),
+                ),
+                const SizedBox(height: 18),
+                FilledButton.icon(
+                  onPressed: () => _signOut(context),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFD94C3D),
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size.fromHeight(54),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
+                    ),
                   ),
+                  icon: const Icon(Icons.logout_rounded),
+                  label: const Text('로그아웃'),
                 ),
-                icon: const Icon(Icons.logout_rounded),
-                label: const Text('로그아웃'),
-              ),
-            ],
+              ],
+            ),
           );
         },
       ),
@@ -260,129 +245,398 @@ class _MyPageState extends State<MyPage> {
   }
 }
 
-class _SummaryCard extends StatelessWidget {
-  const _SummaryCard({required this.ecoPoint, required this.grade});
-
-  final int ecoPoint;
-  final String grade;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: colorScheme.primaryContainer.withValues(alpha: 0.55),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: colorScheme.primary.withValues(alpha: 0.12)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: _SummaryMetric(
-              icon: Icons.eco_rounded,
-              title: '현재 탄소 점수',
-              value: '$ecoPoint Eco Point',
-            ),
-          ),
-          Container(
-            width: 1,
-            height: 56,
-            color: colorScheme.primary.withValues(alpha: 0.18),
-          ),
-          Expanded(
-            child: _SummaryMetric(
-              icon: Icons.workspace_premium_rounded,
-              title: '등급',
-              value: grade,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+class _MyPageColors {
+  static const Color background = Color(0xFFF7FAF1);
+  static const Color deepGreen = Color(0xFF1F522B);
+  static const Color mutedGreen = Color(0xFF47704C);
+  static const Color text = Color(0xFF1B241C);
+  static const Color subText = Color(0xFF5B675D);
+  static const Color card = Color(0xFFFFFFFF);
+  static const Color line = Color(0xFFE2E8DE);
 }
 
-class _SummaryMetric extends StatelessWidget {
-  const _SummaryMetric({
-    required this.icon,
-    required this.title,
-    required this.value,
-  });
-
-  final IconData icon;
-  final String title;
-  final String value;
+class _MyPageHeader extends StatelessWidget {
+  const _MyPageHeader();
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, color: colorScheme.primary),
+        Text(
+          'ECO',
+          style: Theme.of(context).textTheme.displaySmall?.copyWith(
+            color: _MyPageColors.deepGreen,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 0,
+          ),
+        ),
         const SizedBox(height: 10),
         Text(
-          title,
-          style: Theme.of(
-            context,
-          ).textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+          '나의 탄소 소비를 한눈에 확인해요',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            color: _MyPageColors.subText,
+            fontWeight: FontWeight.w800,
+          ),
         ),
       ],
     );
   }
 }
 
-class _SectionCard extends StatelessWidget {
-  const _SectionCard({
-    required this.title,
-    required this.icon,
-    required this.child,
-  });
+class _CarbonHeroCard extends StatelessWidget {
+  const _CarbonHeroCard({required this.data});
 
-  final String title;
-  final IconData icon;
-  final Widget child;
+  final _MyPageData data;
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(26),
       decoration: BoxDecoration(
-        color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colorScheme.outlineVariant),
+        color: _MyPageColors.deepGreen,
+        borderRadius: BorderRadius.circular(34),
+        boxShadow: [
+          BoxShadow(
+            color: _MyPageColors.deepGreen.withValues(alpha: 0.18),
+            blurRadius: 24,
+            offset: const Offset(0, 14),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Text(
+            '현재 탄소 점수',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: Colors.white.withValues(alpha: 0.82),
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            '${data.ecoPoint}점',
+            style: Theme.of(context).textTheme.displayLarge?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0,
+            ),
+          ),
+          const SizedBox(height: 28),
+          _HeroStatStrip(
+            icon: Icons.emoji_events_rounded,
+            label: '내 에코 포인트',
+            value: '${data.totalSavedScore} pts',
+          ),
+          const SizedBox(height: 14),
           Row(
             children: [
-              Icon(icon, color: colorScheme.primary),
-              const SizedBox(width: 8),
-              Text(
-                title,
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+              Expanded(
+                child: _HeroSmallStat(
+                  label: '누적 분석',
+                  value: '${data.receiptAnalysisCount}회',
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _HeroSmallStat(
+                  label: '주요 카테고리',
+                  value: data.mostConsumedCategory,
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 14),
-          child,
+          const SizedBox(height: 18),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 17, horizontal: 18),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(28),
+            ),
+            child: Text(
+              data.rankingMessage,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                color: _MyPageColors.deepGreen,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
         ],
       ),
+    );
+  }
+}
+
+class _HeroStatStrip extends StatelessWidget {
+  const _HeroStatStrip({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: Colors.white, size: 26),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: Colors.white.withValues(alpha: 0.86),
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HeroSmallStat extends StatelessWidget {
+  const _HeroSmallStat({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 96,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Colors.white.withValues(alpha: 0.78),
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MiniInfoCard extends StatelessWidget {
+  const _MiniInfoCard({
+    required this.icon,
+    required this.title,
+    required this.value,
+    required this.helper,
+  });
+
+  final IconData icon;
+  final String title;
+  final String value;
+  final String helper;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 156,
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: _MyPageColors.card,
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: _MyPageColors.mutedGreen, size: 30),
+          const Spacer(),
+          Text(
+            title,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: _MyPageColors.subText,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: _MyPageColors.text,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            helper,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: _MyPageColors.subText,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.title, this.trailing});
+
+  final String title;
+  final String? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            title,
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              color: _MyPageColors.text,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ),
+        if (trailing != null)
+          Text(
+            trailing!,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: _MyPageColors.mutedGreen,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _StatsPanel extends StatelessWidget {
+  const _StatsPanel({required this.data});
+
+  final _MyPageData data;
+
+  @override
+  Widget build(BuildContext context) {
+    return _SoftPanel(
+      child: Column(
+        children: [
+          _StatRow(
+            label: '누적 영수증 분석 횟수',
+            value: '${data.receiptAnalysisCount}회',
+          ),
+          _StatRow(label: '누적 절감 점수', value: '${data.totalSavedScore}점'),
+          _StatRow(label: '가장 많이 소비한 카테고리', value: data.mostConsumedCategory),
+          _StatRow(
+            label: '이번 달 친환경 소비 횟수',
+            value: '${data.monthlyEcoConsumptionCount}회',
+          ),
+          const SizedBox(height: 8),
+          _RankingMessage(message: data.rankingMessage),
+        ],
+      ),
+    );
+  }
+}
+
+class _AccountPanel extends StatelessWidget {
+  const _AccountPanel({required this.onUserInfoTap, required this.onDeleteTap});
+
+  final VoidCallback onUserInfoTap;
+  final VoidCallback onDeleteTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return _SoftPanel(
+      child: Column(
+        children: [
+          _AccountButton(
+            icon: Icons.person_outline_rounded,
+            label: '회원 정보',
+            onTap: onUserInfoTap,
+          ),
+          const Divider(height: 18, color: _MyPageColors.line),
+          _AccountButton(
+            icon: Icons.no_accounts_outlined,
+            label: '회원 탈퇴',
+            onTap: onDeleteTap,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SoftPanel extends StatelessWidget {
+  const _SoftPanel({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: _MyPageColors.card,
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: _MyPageColors.line),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: child,
     );
   }
 }
