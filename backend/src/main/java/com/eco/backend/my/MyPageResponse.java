@@ -1,5 +1,7 @@
 package com.eco.backend.my;
 
+import java.util.List;
+
 public class MyPageResponse {
 
     private final String userId;
@@ -14,6 +16,7 @@ public class MyPageResponse {
     private final Integer previousMonthRank;
     private final Integer currentMonthRank;
     private final String rankingMessage;
+    private final List<MyPageBadgeResponse> badges;
 
     public MyPageResponse(
             String userId,
@@ -27,7 +30,8 @@ public class MyPageResponse {
             int monthlyEcoConsumptionCount,
             Integer previousMonthRank,
             Integer currentMonthRank,
-            String rankingMessage
+            String rankingMessage,
+            List<MyPageBadgeResponse> badges
     ) {
         this.userId = userId;
         this.nickname = nickname;
@@ -41,6 +45,7 @@ public class MyPageResponse {
         this.previousMonthRank = previousMonthRank;
         this.currentMonthRank = currentMonthRank;
         this.rankingMessage = rankingMessage;
+        this.badges = badges;
     }
 
     public String getUserId() {
@@ -89,5 +94,9 @@ public class MyPageResponse {
 
     public String getRankingMessage() {
         return rankingMessage;
+    }
+
+    public List<MyPageBadgeResponse> getBadges() {
+        return badges;
     }
 }

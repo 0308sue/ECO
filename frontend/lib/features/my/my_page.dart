@@ -85,6 +85,12 @@ class _MyPageState extends State<MyPage> {
               _SummaryCard(ecoPoint: data.ecoPoint, grade: data.grade),
               const SizedBox(height: 14),
               _SectionCard(
+                title: '획득 배지',
+                icon: Icons.emoji_events_rounded,
+                child: _BadgeList(badges: data.badges),
+              ),
+              const SizedBox(height: 14),
+              _SectionCard(
                 title: '내 활동 통계',
                 icon: Icons.bar_chart_rounded,
                 child: Column(
@@ -444,6 +450,160 @@ class _RankingMessage extends StatelessWidget {
   }
 }
 
+class _BadgeList extends StatelessWidget {
+  const _BadgeList({required this.badges});
+
+  final List<_BadgeData> badges;
+
+  @override
+  Widget build(BuildContext context) {
+    if (badges.isEmpty) {
+      return Text(
+        '아직 획득한 배지가 없습니다.',
+        style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+      );
+    }
+
+    return Column(
+      children: badges
+          .map(
+            (badge) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _BadgeTile(badge: badge),
+            ),
+          )
+          .toList(),
+    );
+  }
+}
+
+class _BadgeTile extends StatelessWidget {
+  const _BadgeTile({required this.badge});
+
+  final _BadgeData badge;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = _BadgePalette.fromTone(badge.tone);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: palette.background,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: palette.border),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: palette.iconBackground,
+              shape: BoxShape.circle,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(5),
+              child: Image.asset(
+                badge.imagePath,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) {
+                  return Icon(Icons.eco_rounded, color: palette.icon);
+                },
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  badge.name,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 15,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  badge.description,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BadgePalette {
+  const _BadgePalette({
+    required this.background,
+    required this.border,
+    required this.iconBackground,
+    required this.icon,
+  });
+
+  final Color background;
+  final Color border;
+  final Color iconBackground;
+  final Color icon;
+
+  factory _BadgePalette.fromTone(String tone) {
+    switch (tone) {
+      case 'gold':
+        return const _BadgePalette(
+          background: Color(0xFFFFF7DE),
+          border: Color(0xFFE8C85A),
+          iconBackground: Color(0xFFFFE28A),
+          icon: Color(0xFF7A5A00),
+        );
+      case 'silver':
+        return const _BadgePalette(
+          background: Color(0xFFF3F5F7),
+          border: Color(0xFFC6CDD5),
+          iconBackground: Color(0xFFDDE3EA),
+          icon: Color(0xFF4F5B66),
+        );
+      case 'bronze':
+        return const _BadgePalette(
+          background: Color(0xFFFFEFE4),
+          border: Color(0xFFD99A6C),
+          iconBackground: Color(0xFFE8B084),
+          icon: Color(0xFF74411E),
+        );
+      case 'mint':
+        return const _BadgePalette(
+          background: Color(0xFFEAF8F1),
+          border: Color(0xFFB9E5D0),
+          iconBackground: Color(0xFFCFF2DE),
+          icon: Color(0xFF24724E),
+        );
+      case 'blue':
+        return const _BadgePalette(
+          background: Color(0xFFEAF3FF),
+          border: Color(0xFFBDD5F6),
+          iconBackground: Color(0xFFD3E5FF),
+          icon: Color(0xFF2D5F99),
+        );
+      default:
+        return const _BadgePalette(
+          background: Color(0xFFEEF7EA),
+          border: Color(0xFFC8E7BF),
+          iconBackground: Color(0xFFDDF4D6),
+          icon: Color(0xFF3B713B),
+        );
+    }
+  }
+}
+
 class _AccountButton extends StatelessWidget {
   const _AccountButton({
     required this.icon,
@@ -561,6 +721,7 @@ class _MyPageData {
     required this.mostConsumedCategory,
     required this.monthlyEcoConsumptionCount,
     required this.rankingMessage,
+    required this.badges,
   });
 
   final String nickname;
@@ -572,6 +733,7 @@ class _MyPageData {
   final String mostConsumedCategory;
   final int monthlyEcoConsumptionCount;
   final String rankingMessage;
+  final List<_BadgeData> badges;
 
   factory _MyPageData.fromJson(
     Map<String, dynamic> json, {
@@ -593,6 +755,7 @@ class _MyPageData {
         json['rankingMessage'],
         fallback: '이번 달 친환경 소비 기록을 쌓으면 랭킹 비교가 표시됩니다.',
       ),
+      badges: _readBadges(json['badges']),
     );
   }
 
@@ -607,8 +770,72 @@ class _MyPageData {
       mostConsumedCategory: '아직 분석된 카테고리가 없습니다.',
       monthlyEcoConsumptionCount: 0,
       rankingMessage: '이번 달 친환경 소비 기록을 쌓으면 랭킹 비교가 표시됩니다.',
+      badges: const [],
     );
   }
+}
+
+class _BadgeData {
+  const _BadgeData({
+    required this.id,
+    required this.name,
+    required this.description,
+    required this.tone,
+  });
+
+  final String id;
+  final String name;
+  final String description;
+  final String tone;
+
+  String get imagePath {
+    if (id.startsWith('monthly_gold_leaf')) {
+      return 'assets/badges/gold_leaf.png';
+    }
+    if (id.startsWith('monthly_silver_leaf')) {
+      return 'assets/badges/silver_leaf.png';
+    }
+    if (id.startsWith('monthly_bronze_leaf')) {
+      return 'assets/badges/bronze_leaf.png';
+    }
+    if (id.startsWith('low_carbon_routine')) {
+      return 'assets/badges/low_carbon_routine.png';
+    }
+    if (id.startsWith('top_ten')) {
+      return 'assets/badges/top_ten.png';
+    }
+    if (id.startsWith('rising_rank')) {
+      return 'assets/badges/rising_rank.png';
+    }
+    if (id.startsWith('monthly_focus')) {
+      return 'assets/badges/monthly_focus.png';
+    }
+    if (id.startsWith('comeback_practitioner')) {
+      return 'assets/badges/comeback_practitioner.png';
+    }
+
+    return 'assets/badges/$id.png';
+  }
+
+  factory _BadgeData.fromJson(Map<String, dynamic> json) {
+    return _BadgeData(
+      id: _readString(json['id'], fallback: ''),
+      name: _readString(json['name'], fallback: '배지'),
+      description: _readString(json['description'], fallback: ''),
+      tone: _readString(json['tone'], fallback: 'green'),
+    );
+  }
+}
+
+List<_BadgeData> _readBadges(Object? value) {
+  if (value is! List) {
+    return const [];
+  }
+
+  return value
+      .whereType<Map<String, dynamic>>()
+      .map(_BadgeData.fromJson)
+      .toList();
 }
 
 int _readInt(Object? value) {
