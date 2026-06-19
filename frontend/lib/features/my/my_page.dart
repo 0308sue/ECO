@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
+import '../../core/theme/eco_design_system.dart';
 import '../../core/constants/api_constants.dart';
 import '../../utils/validators.dart';
 import '../auth/auth_gate.dart';
@@ -74,42 +75,18 @@ class _MyPageState extends State<MyPage> {
 
           return SafeArea(
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 26, 16, 32),
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 112),
               children: [
-                const _MyPageHeader(),
-                const SizedBox(height: 24),
                 _CarbonHeroCard(data: data),
-                const SizedBox(height: 18),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _MiniInfoCard(
-                        icon: Icons.workspace_premium_rounded,
-                        title: '등급',
-                        value: data.grade,
-                        helper: '${data.nickname}님의 현재 레벨',
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: _MiniInfoCard(
-                        icon: Icons.eco_rounded,
-                        title: '이번 달 친환경 소비',
-                        value: '${data.monthlyEcoConsumptionCount}회',
-                        helper: '이번 달 실천 기록',
-                      ),
-                    ),
-                  ],
-                ),
                 const SizedBox(height: 28),
                 _SectionHeader(
-                  title: '획득 배지',
-                  trailing: '${data.badges.length}개',
+                  title: '배지 컬렉션',
+                  trailing: '${data.badges.length}개 획득',
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
                 _BadgeList(badges: data.badges),
                 const SizedBox(height: 28),
-                const _SectionHeader(title: '내 활동 통계'),
+                const _SectionHeader(title: '활동 통계'),
                 const SizedBox(height: 12),
                 _StatsPanel(data: data),
                 const SizedBox(height: 28),
@@ -246,42 +223,12 @@ class _MyPageState extends State<MyPage> {
 }
 
 class _MyPageColors {
-  static const Color background = Color(0xFFF7FAF1);
-  static const Color deepGreen = Color(0xFF1F522B);
-  static const Color mutedGreen = Color(0xFF47704C);
-  static const Color text = Color(0xFF1B241C);
-  static const Color subText = Color(0xFF5B675D);
+  static const Color background = EcoColors.background;
+  static const Color deepGreen = EcoColors.secondary;
+  static const Color mutedGreen = EcoColors.primary;
+  static const Color text = EcoColors.text;
   static const Color card = Color(0xFFFFFFFF);
-  static const Color line = Color(0xFFE2E8DE);
-}
-
-class _MyPageHeader extends StatelessWidget {
-  const _MyPageHeader();
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'ECO',
-          style: Theme.of(context).textTheme.displaySmall?.copyWith(
-            color: _MyPageColors.deepGreen,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 0,
-          ),
-        ),
-        const SizedBox(height: 10),
-        Text(
-          '나의 탄소 소비를 한눈에 확인해요',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            color: _MyPageColors.subText,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-      ],
-    );
-  }
+  static const Color line = EcoColors.line;
 }
 
 class _CarbonHeroCard extends StatelessWidget {
@@ -292,10 +239,10 @@ class _CarbonHeroCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(26),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: _MyPageColors.deepGreen,
-        borderRadius: BorderRadius.circular(34),
+        borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
             color: _MyPageColors.deepGreen.withValues(alpha: 0.18),
@@ -307,106 +254,77 @@ class _CarbonHeroCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '현재 탄소 점수',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              color: Colors.white.withValues(alpha: 0.82),
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            '${data.ecoPoint}점',
-            style: Theme.of(context).textTheme.displayLarge?.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 0,
-            ),
-          ),
-          const SizedBox(height: 28),
-          _HeroStatStrip(
-            icon: Icons.emoji_events_rounded,
-            label: '내 에코 포인트',
-            value: '${data.totalSavedScore} pts',
-          ),
-          const SizedBox(height: 14),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: _HeroSmallStat(
-                  label: '누적 분석',
-                  value: '${data.receiptAnalysisCount}회',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      '마이페이지',
+                      style: TextStyle(
+                        color: Color(0xFFCDE2D4),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      data.nickname,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 25,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.4,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    EcoPill(
+                      label: data.grade,
+                      icon: Icons.workspace_premium_rounded,
+                      background: EcoColors.accent,
+                      foreground: EcoColors.text,
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _HeroSmallStat(
-                  label: '주요 카테고리',
-                  value: data.mostConsumedCategory,
-                ),
-              ),
+              const SizedBox(width: 18),
+              _LevelCharacter(grade: data.grade),
             ],
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 24),
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 17, horizontal: 18),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(28),
+              color: Colors.white.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(18),
             ),
-            child: Text(
-              data.rankingMessage,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                color: _MyPageColors.deepGreen,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _HeroStatStrip extends StatelessWidget {
-  const _HeroStatStrip({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.18),
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: Colors.white, size: 26),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Text(
-              label,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: Colors.white.withValues(alpha: 0.86),
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-          Text(
-            value,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.w900,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  '이번 달 한마디',
+                  style: TextStyle(
+                    color: Color(0xFFCDE2D4),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  data.rankingMessage,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    height: 1.35,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -415,114 +333,46 @@ class _HeroStatStrip extends StatelessWidget {
   }
 }
 
-class _HeroSmallStat extends StatelessWidget {
-  const _HeroSmallStat({required this.label, required this.value});
+class _LevelCharacter extends StatelessWidget {
+  const _LevelCharacter({required this.grade});
 
-  final String label;
-  final String value;
+  final String grade;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 96,
-      padding: const EdgeInsets.all(18),
+      width: 112,
+      height: 132,
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.18),
-        borderRadius: BorderRadius.circular(22),
+        color: Colors.white.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(26),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.white.withValues(alpha: 0.78),
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.all(8),
+        child: Image.asset(
+          _characterImagePath(grade),
+          fit: BoxFit.contain,
+          errorBuilder: (context, error, stackTrace) {
+            return const Icon(Icons.eco_rounded, color: Colors.white, size: 58);
+          },
+        ),
       ),
     );
   }
-}
 
-class _MiniInfoCard extends StatelessWidget {
-  const _MiniInfoCard({
-    required this.icon,
-    required this.title,
-    required this.value,
-    required this.helper,
-  });
-
-  final IconData icon;
-  final String title;
-  final String value;
-  final String helper;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 156,
-      padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        color: _MyPageColors.card,
-        borderRadius: BorderRadius.circular(28),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: _MyPageColors.mutedGreen, size: 30),
-          const Spacer(),
-          Text(
-            title,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: _MyPageColors.subText,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              color: _MyPageColors.text,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            helper,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: _MyPageColors.subText,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
-    );
+  String _characterImagePath(String grade) {
+    switch (grade.toLowerCase()) {
+      case 'sprout':
+        return 'assets/characters/sprout.png';
+      case 'tree':
+        return 'assets/characters/tree.png';
+      case 'forest':
+        return 'assets/characters/forest.png';
+      case 'seed':
+      default:
+        return 'assets/characters/seed.png';
+    }
   }
 }
 
@@ -572,14 +422,11 @@ class _StatsPanel extends StatelessWidget {
             label: '누적 영수증 분석 횟수',
             value: '${data.receiptAnalysisCount}회',
           ),
-          _StatRow(label: '누적 절감 점수', value: '${data.totalSavedScore}점'),
-          _StatRow(label: '가장 많이 소비한 카테고리', value: data.mostConsumedCategory),
+          _StatRow(label: '누적 탄소 절감', value: '${data.totalSavedScore}점'),
           _StatRow(
             label: '이번 달 친환경 소비 횟수',
             value: '${data.monthlyEcoConsumptionCount}회',
           ),
-          const SizedBox(height: 8),
-          _RankingMessage(message: data.rankingMessage),
         ],
       ),
     );
@@ -598,7 +445,7 @@ class _AccountPanel extends StatelessWidget {
       child: Column(
         children: [
           _AccountButton(
-            icon: Icons.person_outline_rounded,
+            icon: Icons.badge_outlined,
             label: '회원 정보',
             onTap: onUserInfoTap,
           ),
@@ -626,15 +473,9 @@ class _SoftPanel extends StatelessWidget {
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: _MyPageColors.card,
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: _MyPageColors.line),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
+        boxShadow: EcoShadow.soft,
       ),
       child: child,
     );
@@ -676,34 +517,6 @@ class _StatRow extends StatelessWidget {
   }
 }
 
-class _RankingMessage extends StatelessWidget {
-  const _RankingMessage({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(top: 12),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: colorScheme.secondaryContainer.withValues(alpha: 0.55),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        message,
-        style: TextStyle(
-          color: colorScheme.onSecondaryContainer,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
-}
-
 class _BadgeList extends StatelessWidget {
   const _BadgeList({required this.badges});
 
@@ -712,21 +525,27 @@ class _BadgeList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (badges.isEmpty) {
-      return Text(
-        '아직 획득한 배지가 없습니다.',
-        style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+      return const EcoCard(
+        child: Text(
+          '아직 획득한 배지가 없습니다.',
+          style: TextStyle(color: EcoColors.muted, fontWeight: FontWeight.w800),
+        ),
       );
     }
 
-    return Column(
-      children: badges
-          .map(
-            (badge) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: _BadgeTile(badge: badge),
-            ),
-          )
-          .toList(),
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: badges.length,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        childAspectRatio: 0.82,
+      ),
+      itemBuilder: (context, index) {
+        return _BadgeTile(badge: badges[index]);
+      },
     );
   }
 }
@@ -741,24 +560,25 @@ class _BadgeTile extends StatelessWidget {
     final palette = _BadgePalette.fromTone(badge.tone);
 
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: palette.background,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: palette.border),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: EcoColors.line),
+        boxShadow: EcoShadow.soft,
       ),
-      child: Row(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            width: 48,
-            height: 48,
+            width: 68,
+            height: 68,
             decoration: BoxDecoration(
               color: palette.iconBackground,
               shape: BoxShape.circle,
             ),
             child: Padding(
-              padding: const EdgeInsets.all(5),
+              padding: const EdgeInsets.all(4),
               child: Image.asset(
                 badge.imagePath,
                 fit: BoxFit.contain,
@@ -768,27 +588,17 @@ class _BadgeTile extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  badge.name,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 15,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  badge.description,
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    fontSize: 13,
-                  ),
-                ),
-              ],
+          const SizedBox(height: 12),
+          Text(
+            badge.name,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: EcoColors.text,
+              fontWeight: FontWeight.w900,
+              fontSize: 12,
+              height: 1.1,
             ),
           ),
         ],

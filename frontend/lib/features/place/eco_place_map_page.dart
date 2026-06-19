@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
+import '../../core/theme/eco_design_system.dart';
 import '../../core/constants/api_constants.dart';
 import 'eco_place.dart';
 import 'eco_place_repository.dart';
@@ -232,9 +233,7 @@ class _EcoPlaceMapPageState extends State<EcoPlaceMapPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('친환경 장소 지도'),
-      ),
+      backgroundColor: EcoColors.background,
       body: _buildBody(),
     );
   }
@@ -269,17 +268,27 @@ class _EcoPlaceMapPageState extends State<EcoPlaceMapPage> {
         WebViewWidget(controller: _webViewController!),
 
         Positioned(
-          left: 16,
-          right: 16,
-          top: 16,
-          child: _PlaceCountBadge(count: _places.length),
+          left: 20,
+          right: 20,
+          top: 54,
+          child: _MapTopPanel(
+            count: _places.length,
+            onTapBack: () => Navigator.of(context).maybePop(),
+          ),
+        ),
+
+        const Positioned(
+          left: 20,
+          right: 20,
+          top: 148,
+          child: _PlaceFilters(),
         ),
 
         if (_selectedPlace != null)
           Positioned(
-            left: 16,
-            right: 16,
-            bottom: 20,
+            left: 20,
+            right: 20,
+            bottom: 32,
             child: _EcoPlaceDetailCard(
               place: _selectedPlace!,
               onClose: () {
@@ -290,6 +299,90 @@ class _EcoPlaceMapPageState extends State<EcoPlaceMapPage> {
             ),
           ),
       ],
+    );
+  }
+}
+
+class _MapTopPanel extends StatelessWidget {
+  const _MapTopPanel({
+    required this.count,
+    required this.onTapBack,
+  });
+
+  final int count;
+  final VoidCallback onTapBack;
+
+  @override
+  Widget build(BuildContext context) {
+    return EcoCard(
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: EcoColors.primary.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(15),
+            ),
+            child: IconButton(
+              padding: EdgeInsets.zero,
+              onPressed: onTapBack,
+              icon: const Icon(
+                Icons.arrow_back_rounded,
+                color: EcoColors.secondary,
+              ),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  '친환경 장소',
+                  style: TextStyle(
+                    color: EcoColors.text,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  '추천 친환경 장소 $count개',
+                  style: const TextStyle(
+                    color: EcoColors.muted,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PlaceFilters extends StatelessWidget {
+  const _PlaceFilters();
+
+  @override
+  Widget build(BuildContext context) {
+    const filters = ['카페', '마트', '식당', '제로웨이스트'];
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: filters
+            .map(
+              (filter) => Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: EcoPill(label: filter),
+              ),
+            )
+            .toList(),
+      ),
     );
   }
 }
@@ -342,14 +435,10 @@ class _EcoPlaceDetailCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 8,
-      clipBehavior: Clip.antiAlias,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
-      ),
+    return EcoCard(
+      padding: const EdgeInsets.fromLTRB(18, 16, 12, 18),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 14, 8, 16),
+        padding: EdgeInsets.zero,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -361,7 +450,8 @@ class _EcoPlaceDetailCard extends StatelessWidget {
                     place.placeName,
                     style: const TextStyle(
                       fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w900,
+                      color: EcoColors.text,
                     ),
                   ),
                 ),
@@ -376,19 +466,29 @@ class _EcoPlaceDetailCard extends StatelessWidget {
               place.placeType,
               style: const TextStyle(
                 fontSize: 13,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w900,
+                color: EcoColors.secondary,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               place.address,
-              style: const TextStyle(fontSize: 14),
+              style: const TextStyle(
+                fontSize: 14,
+                color: EcoColors.muted,
+                fontWeight: FontWeight.w700,
+              ),
             ),
             if (place.reason.isNotEmpty) ...[
               const SizedBox(height: 8),
               Text(
                 place.reason,
-                style: const TextStyle(fontSize: 14),
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: EcoColors.text,
+                  fontWeight: FontWeight.w700,
+                  height: 1.35,
+                ),
               ),
             ],
           ],

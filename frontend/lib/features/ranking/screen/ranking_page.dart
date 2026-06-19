@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/eco_design_system.dart';
 import '../model/ranking_user.dart';
 import '../service/ranking_service.dart';
 
@@ -10,12 +11,12 @@ class RankingPage extends StatelessWidget {
     RankingService? rankingService,
   }) : _rankingService = rankingService ?? RankingService();
 
-  static const Color _backgroundColor = Color(0xFFF8FBF2);
-  static const Color _primaryColor = Color(0xFF23552D);
-  static const Color _secondaryGreen = Color(0xFF416F49);
-  static const Color _textColor = Color(0xFF1D251D);
-  static const Color _mutedTextColor = Color(0xFF5F695E);
-  static const Color _creamColor = Color(0xFFFFF2D9);
+  static const Color _backgroundColor = EcoColors.background;
+  static const Color _primaryColor = EcoColors.primary;
+  static const Color _secondaryGreen = EcoColors.secondary;
+  static const Color _textColor = EcoColors.text;
+  static const Color _mutedTextColor = EcoColors.muted;
+  static const Color _creamColor = Color(0xFFFFF6D8);
 
   final String currentUserId;
   final RankingService _rankingService;
@@ -54,57 +55,34 @@ class RankingPage extends StatelessWidget {
             final currentUser = _findCurrentUser(users);
             final topUser = users.first;
             final topUsers = users.take(10).toList();
+            final podiumUsers = users.take(3).toList();
 
             return ListView(
-              padding: const EdgeInsets.fromLTRB(18, 22, 18, 28),
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 112),
               children: [
                 const _RankingHeader(),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
                 _MyRankingDashboard(
                   currentUser: currentUser,
                   participantCount: users.length,
                   topUser: topUser,
                 ),
+                const SizedBox(height: 20),
+                _TopThreePodium(users: podiumUsers),
                 const SizedBox(height: 28),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _MiniMetricCard(
-                        icon: Icons.emoji_events_outlined,
-                        title: '이번 달 1위',
-                        value: topUser.nickname,
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: _MiniMetricCard(
-                        icon: Icons.eco_outlined,
-                        title: '최고 포인트',
-                        value: '${_formatNumber(topUser.ecoPoint)} pts',
-                      ),
-                    ),
-                  ],
+                const EcoSectionHeader(
+                  title: '전체 랭킹',
                 ),
-                const SizedBox(height: 30),
+                const SizedBox(height: 12),
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'Top Users',
-                      style: Theme.of(context).textTheme.headlineSmall
-                          ?.copyWith(
-                            color: _textColor,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 0,
-                          ),
+                    const EcoPill(
+                      label: '주간',
+                      background: EcoColors.secondary,
+                      foreground: Colors.white,
                     ),
-                    Text(
-                      '이번 달',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: _secondaryGreen,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
+                    const SizedBox(width: 8),
+                    EcoPill(label: '월간'),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -141,16 +119,16 @@ class _RankingHeader extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'ECO',
+          '랭킹',
           style: Theme.of(context).textTheme.displaySmall?.copyWith(
-            color: RankingPage._primaryColor,
+            color: RankingPage._textColor,
             fontWeight: FontWeight.w900,
-            letterSpacing: 0,
+            letterSpacing: -0.7,
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 8),
         Text(
-          '이번 달 에코 랭킹을 한눈에 확인해요',
+          '이번 주 에코 포인트 경쟁을 확인해요.',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
             color: RankingPage._mutedTextColor,
             fontWeight: FontWeight.w800,
@@ -183,15 +161,9 @@ class _MyRankingDashboard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        color: RankingPage._primaryColor,
-        borderRadius: BorderRadius.circular(28),
-        boxShadow: [
-          BoxShadow(
-            color: RankingPage._primaryColor.withValues(alpha: 0.16),
-            blurRadius: 22,
-            offset: const Offset(0, 12),
-          ),
-        ],
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: EcoShadow.soft,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -199,7 +171,7 @@ class _MyRankingDashboard extends StatelessWidget {
           Text(
             '이번 달 나의 랭킹',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              color: Colors.white.withValues(alpha: 0.86),
+              color: RankingPage._textColor,
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -209,7 +181,7 @@ class _MyRankingDashboard extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.displayMedium?.copyWith(
-              color: Colors.white,
+              color: RankingPage._secondaryGreen,
               fontWeight: FontWeight.w900,
               letterSpacing: 0,
             ),
@@ -233,7 +205,7 @@ class _MyRankingDashboard extends StatelessWidget {
                   child: Text(
                     '내 에코 포인트',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Colors.white.withValues(alpha: 0.86),
+                  color: Colors.white.withValues(alpha: 0.86),
                       fontWeight: FontWeight.w900,
                     ),
                   ),
@@ -268,8 +240,8 @@ class _MyRankingDashboard extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 17),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
+              color: EcoColors.primary.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(18),
             ),
             child: Text(
               '현재 1위 ${topUser.nickname} · ${_formatNumber(topUser.ecoPoint)} pts',
@@ -326,6 +298,143 @@ class _GreenInfoTile extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _TopThreePodium extends StatelessWidget {
+  const _TopThreePodium({required this.users});
+
+  final List<RankingUser> users;
+
+  @override
+  Widget build(BuildContext context) {
+    final first = users.isNotEmpty ? users[0] : null;
+    final second = users.length > 1 ? users[1] : null;
+    final third = users.length > 2 ? users[2] : null;
+
+    return EcoCard(
+      padding: const EdgeInsets.fromLTRB(18, 20, 18, 18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '상위 3명',
+            style: TextStyle(
+              color: EcoColors.text,
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 18),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: _PodiumTile(
+                  user: second,
+                  rank: 2,
+                  color: const Color(0xFFC8CDD5),
+                  height: 86,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _PodiumTile(
+                  user: first,
+                  rank: 1,
+                  color: EcoColors.accent,
+                  height: 118,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _PodiumTile(
+                  user: third,
+                  rank: 3,
+                  color: const Color(0xFFD79A69),
+                  height: 72,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PodiumTile extends StatelessWidget {
+  const _PodiumTile({
+    required this.user,
+    required this.rank,
+    required this.color,
+    required this.height,
+  });
+
+  final RankingUser? user;
+  final int rank;
+  final Color color;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    final nickname = user?.nickname ?? '-';
+    final points = user == null ? '-' : _formatNumber(user!.ecoPoint);
+
+    return Column(
+      children: [
+        CircleAvatar(
+          radius: rank == 1 ? 30 : 25,
+          backgroundColor: color.withValues(alpha: 0.24),
+          child: Text(
+            nickname == '-' ? '-' : nickname.characters.first,
+            style: TextStyle(
+              color: rank == 1 ? const Color(0xFF8D6B08) : EcoColors.text,
+              fontWeight: FontWeight.w900,
+              fontSize: rank == 1 ? 22 : 18,
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          nickname,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: EcoColors.text,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          '$points pts',
+          style: const TextStyle(
+            color: EcoColors.muted,
+            fontSize: 12,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Container(
+          height: height,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.28),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+          ),
+          child: Center(
+            child: Text(
+              '$rank',
+              style: TextStyle(
+                color: color,
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

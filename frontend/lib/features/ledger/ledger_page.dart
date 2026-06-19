@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/theme/eco_design_system.dart';
+
 class LedgerPage extends StatefulWidget {
   const LedgerPage({
     super.key,
@@ -19,13 +21,13 @@ class _LedgerPageState extends State<LedgerPage> {
   DateTime _selectedMonth = DateTime(DateTime.now().year, DateTime.now().month);
   DateTime _selectedDate = DateTime.now();
 
-  static const Color backgroundColor = Color(0xFFF7FAF2);
-  static const Color primaryColor = Color(0xFF3B713B);
-  static const Color darkGreen = Color(0xFF244D2A);
+  static const Color backgroundColor = EcoColors.background;
+  static const Color primaryColor = EcoColors.primary;
+  static const Color darkGreen = EcoColors.secondary;
   static const Color cardColor = Color(0xFFFFFFFF);
-  static const Color textColor = Color(0xFF222820);
-  static const Color subTextColor = Color(0xFF5A6358);
-  static const Color expenseColor = Color(0xFFD95D59);
+  static const Color textColor = EcoColors.text;
+  static const Color subTextColor = EcoColors.muted;
+  static const Color expenseColor = EcoColors.danger;
 
   @override
   Widget build(BuildContext context) {
@@ -83,7 +85,7 @@ class _LedgerPageState extends State<LedgerPage> {
               },
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+                padding: const EdgeInsets.fromLTRB(20, 24, 20, 112),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -92,13 +94,14 @@ class _LedgerPageState extends State<LedgerPage> {
                     _buildSummaryCards(
                       weekTotal: weekTotal,
                       dayTotal: dayTotal,
-                      receiptCount: dayReceipts.length,
+                    ),
+                    const SizedBox(height: 24),
+                    _buildDateNavigator(),
+                    const SizedBox(height: 24),
+                    _buildDailyList(
+                      dayReceipts,
                       itemCount: _sumItemCount(dayReceipts),
                     ),
-                    const SizedBox(height: 22),
-                    _buildDateNavigator(),
-                    const SizedBox(height: 16),
-                    _buildDailyList(dayReceipts),
                   ],
                 ),
               ),
@@ -112,31 +115,45 @@ class _LedgerPageState extends State<LedgerPage> {
   Widget _buildHeader(int monthTotal) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(22, 22, 22, 24),
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 26),
       decoration: BoxDecoration(
         color: darkGreen,
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.12),
-            blurRadius: 14,
-            offset: const Offset(0, 7),
+            color: darkGreen.withValues(alpha: 0.18),
+            blurRadius: 28,
+            offset: const Offset(0, 16),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            '가계부',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 28,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.7,
-            ),
+          const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '가계부',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 30,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -0.7,
+                ),
+              ),
+              SizedBox(height: 6),
+              Text(
+                '영수증 기반 소비 기록',
+                style: TextStyle(
+                  color: Color(0xFFCDE2D4),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 24),
           Row(
             children: [
               _CircleIconButton(
@@ -161,23 +178,28 @@ class _LedgerPageState extends State<LedgerPage> {
               ),
             ],
           ),
-          const SizedBox(height: 26),
-          const Text(
-            '월 소비',
-            style: TextStyle(
-              color: Color(0xFFD8E8D4),
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
+          const SizedBox(height: 28),
+          const Center(
+            child: Text(
+              '월 소비',
+              style: TextStyle(
+                color: Color(0xFFD8E8D4),
+                fontSize: 15,
+                fontWeight: FontWeight.w900,
+              ),
             ),
           ),
           const SizedBox(height: 8),
-          Text(
-            _formatWon(monthTotal),
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 38,
-              fontWeight: FontWeight.w900,
-              letterSpacing: -1.0,
+          Center(
+            child: Text(
+              _formatWon(monthTotal),
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 38,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -1.0,
+              ),
             ),
           ),
         ],
@@ -188,71 +210,22 @@ class _LedgerPageState extends State<LedgerPage> {
   Widget _buildSummaryCards({
     required int weekTotal,
     required int dayTotal,
-    required int receiptCount,
-    required int itemCount,
   }) {
-    return Column(
+    return Row(
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: _LedgerSummaryCard(
-                title: '이번 주 소비',
-                value: _formatWon(weekTotal),
-                icon: Icons.date_range_rounded,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _LedgerSummaryCard(
-                title: '하루 소비',
-                value: _formatWon(dayTotal),
-                icon: Icons.today_rounded,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-          decoration: BoxDecoration(
-            color: cardColor,
-            borderRadius: BorderRadius.circular(22),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.06),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
+        Expanded(
+          child: _LedgerSummaryCard(
+            title: '이번 주 소비',
+            value: _formatWon(weekTotal),
+            icon: Icons.date_range_rounded,
           ),
-          child: Row(
-            children: [
-              const Icon(
-                Icons.receipt_long_rounded,
-                color: primaryColor,
-                size: 26,
-              ),
-              const SizedBox(width: 12),
-              Text(
-                '선택 날짜 기록',
-                style: const TextStyle(
-                  color: textColor,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const Spacer(),
-              Text(
-                '영수증 $receiptCount개 · 품목 $itemCount개',
-                style: const TextStyle(
-                  color: subTextColor,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _LedgerSummaryCard(
+            title: '하루 소비',
+            value: _formatWon(dayTotal),
+            icon: Icons.today_rounded,
           ),
         ),
       ],
@@ -266,16 +239,14 @@ class _LedgerPageState extends State<LedgerPage> {
           icon: Icons.chevron_left_rounded,
           onTap: _goPreviousDay,
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 8),
         Expanded(
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               color: cardColor,
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(
-                color: primaryColor.withValues(alpha: 0.15),
-              ),
+              border: Border.all(color: EcoColors.line),
             ),
             child: Center(
               child: Text(
@@ -290,25 +261,28 @@ class _LedgerPageState extends State<LedgerPage> {
             ),
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 8),
         _SmallRoundButton(
           icon: Icons.chevron_right_rounded,
           onTap: _goNextDay,
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 8),
         InkWell(
           borderRadius: BorderRadius.circular(18),
           onTap: _goToday,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+            padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
             decoration: BoxDecoration(
-              color: primaryColor,
+              color: primaryColor.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: primaryColor.withValues(alpha: 0.18),
+              ),
             ),
             child: const Text(
               '오늘',
               style: TextStyle(
-                color: Colors.white,
+                color: darkGreen,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -318,36 +292,54 @@ class _LedgerPageState extends State<LedgerPage> {
     );
   }
 
-  Widget _buildDailyList(List<LedgerReceipt> receipts) {
+  Widget _buildDailyList(
+    List<LedgerReceipt> receipts, {
+    required int itemCount,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
             Expanded(
-              child: Text(
-                '${_formatShortDate(_selectedDate)} 소비 내역',
-                style: const TextStyle(
-                  color: textColor,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.5,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${_formatShortDate(_selectedDate)} 소비 내역',
+                    style: const TextStyle(
+                      color: textColor,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    '영수증 ${receipts.length}개 · 품목 $itemCount개',
+                    style: const TextStyle(
+                      color: subTextColor,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
               ),
             ),
             FilledButton.icon(
               onPressed: _showManualEntrySheet,
               style: FilledButton.styleFrom(
-                backgroundColor: primaryColor,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                backgroundColor: primaryColor.withValues(alpha: 0.12),
+                foregroundColor: darkGreen,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(18),
                 ),
               ),
               icon: const Icon(Icons.add_rounded, size: 20),
               label: const Text(
-                '추가',
+                '직접 추가',
                 style: TextStyle(fontWeight: FontWeight.w800),
               ),
             ),
@@ -378,9 +370,8 @@ class _LedgerPageState extends State<LedgerPage> {
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: primaryColor.withValues(alpha: 0.1),
-        ),
+        border: Border.all(color: EcoColors.line),
+        boxShadow: EcoShadow.soft,
       ),
       child: Column(
         children: [
@@ -413,9 +404,12 @@ class _LedgerPageState extends State<LedgerPage> {
           FilledButton.icon(
             onPressed: widget.onTapScan,
             style: FilledButton.styleFrom(
-              backgroundColor: primaryColor,
+              backgroundColor: darkGreen,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
             ),
             icon: const Icon(Icons.camera_alt_outlined),
             label: const Text('영수증 분석하기'),
@@ -459,7 +453,7 @@ class _LedgerPageState extends State<LedgerPage> {
 
   showModalBottomSheet(
     context: context,
-    backgroundColor: backgroundColor,
+    backgroundColor: EcoColors.background,
     isScrollControlled: true,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
@@ -542,7 +536,7 @@ class _LedgerPageState extends State<LedgerPage> {
                       color: cardColor,
                       borderRadius: BorderRadius.circular(18),
                       border: Border.all(
-                        color: primaryColor.withValues(alpha: 0.14),
+                        color: EcoColors.line,
                       ),
                     ),
                     child: DropdownButtonHideUnderline(
@@ -609,14 +603,14 @@ class _LedgerPageState extends State<LedgerPage> {
                         color: cardColor,
                         borderRadius: BorderRadius.circular(18),
                         border: Border.all(
-                          color: primaryColor.withValues(alpha: 0.14),
+                          color: EcoColors.line,
                         ),
                       ),
                       child: Row(
                         children: [
                           const Icon(
                             Icons.calendar_month_rounded,
-                            color: primaryColor,
+                            color: darkGreen,
                             size: 22,
                           ),
                           const SizedBox(width: 10),
@@ -657,7 +651,7 @@ class _LedgerPageState extends State<LedgerPage> {
                         );
                       },
                       style: FilledButton.styleFrom(
-                        backgroundColor: primaryColor,
+                        backgroundColor: darkGreen,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 15),
                         shape: RoundedRectangleBorder(
@@ -773,7 +767,7 @@ Future<void> _saveManualEntry({
   void _showReceiptDetail(LedgerReceipt receipt) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: backgroundColor,
+      backgroundColor: EcoColors.background,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
@@ -1053,26 +1047,23 @@ class _LedgerSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return EcoCard(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 18),
-      decoration: BoxDecoration(
-        color: _LedgerPageState.cardColor,
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            icon,
-            color: _LedgerPageState.primaryColor,
-            size: 26,
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: _LedgerPageState.primaryColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(
+              icon,
+              color: _LedgerPageState.darkGreen,
+              size: 22,
+            ),
           ),
           const SizedBox(height: 14),
           Text(
@@ -1115,21 +1106,16 @@ class _ReceiptCard extends StatelessWidget {
 
     return Material(
       color: _LedgerPageState.cardColor,
-      borderRadius: BorderRadius.circular(22),
+      borderRadius: BorderRadius.circular(20),
       child: InkWell(
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(20),
         onTap: onTap,
         child: Container(
           padding: const EdgeInsets.all(17),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: EcoColors.line),
+            boxShadow: EcoShadow.soft,
           ),
           child: Row(
             children: [
@@ -1142,7 +1128,7 @@ class _ReceiptCard extends StatelessWidget {
                 ),
                 child: const Icon(
                   Icons.storefront_rounded,
-                  color: _LedgerPageState.primaryColor,
+                  color: _LedgerPageState.darkGreen,
                   size: 25,
                 ),
               ),
@@ -1238,8 +1224,9 @@ class _CircleIconButton extends StatelessWidget {
         width: 38,
         height: 38,
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.15),
+          color: Colors.white.withValues(alpha: 0.14),
           shape: BoxShape.circle,
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
         ),
         child: Icon(
           icon,
@@ -1266,19 +1253,17 @@ class _SmallRoundButton extends StatelessWidget {
       borderRadius: BorderRadius.circular(999),
       onTap: onTap,
       child: Container(
-        width: 44,
-        height: 44,
+        width: 40,
+        height: 40,
         decoration: BoxDecoration(
           color: _LedgerPageState.cardColor,
           shape: BoxShape.circle,
-          border: Border.all(
-            color: _LedgerPageState.primaryColor.withValues(alpha: 0.16),
-          ),
+          border: Border.all(color: EcoColors.line),
         ),
         child: Icon(
           icon,
-          color: _LedgerPageState.primaryColor,
-          size: 25,
+          color: _LedgerPageState.darkGreen,
+          size: 24,
         ),
       ),
     );
