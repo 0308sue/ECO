@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/theme/eco_design_system.dart';
 import '../home/home_page.dart';
 import '../ledger/ledger_page.dart';
 import '../receipt/receipt_scan_page.dart';
@@ -60,39 +61,92 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
     ];
 
     return Scaffold(
-      backgroundColor: HomePage.backgroundColor,
+      backgroundColor: EcoColors.background,
       body: IndexedStack(
         index: _currentIndex,
         children: pages,
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        selectedItemColor: HomePage.primaryColor,
-        unselectedItemColor: Colors.grey,
-        type: BottomNavigationBarType.fixed,
-        onTap: _moveTab,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_rounded),
-            label: 'Home',
+      extendBody: true,
+      bottomNavigationBar: NavigationBarTheme(
+        data: NavigationBarThemeData(
+          backgroundColor: Colors.white,
+          indicatorColor: EcoColors.primary.withValues(alpha: 0.15),
+          labelTextStyle: WidgetStateProperty.resolveWith((states) {
+            final selected = states.contains(WidgetState.selected);
+            return TextStyle(
+              color: selected ? EcoColors.secondary : EcoColors.muted,
+              fontSize: 11,
+              fontWeight: selected ? FontWeight.w900 : FontWeight.w700,
+            );
+          }),
+          iconTheme: WidgetStateProperty.resolveWith((states) {
+            final selected = states.contains(WidgetState.selected);
+            return IconThemeData(
+              color: selected ? EcoColors.secondary : EcoColors.muted,
+            );
+          }),
+        ),
+        child: Container(
+          margin: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(28),
+            boxShadow: EcoShadow.soft,
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.receipt_long_rounded),
-            label: 'Ledger',
+          clipBehavior: Clip.antiAlias,
+          child: NavigationBar(
+            height: 76,
+            selectedIndex: _currentIndex,
+            onDestinationSelected: _moveTab,
+            destinations: const [
+              NavigationDestination(
+                icon: Icon(Icons.home_outlined),
+                selectedIcon: Icon(Icons.home_rounded),
+                label: '홈',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.menu_book_outlined),
+                selectedIcon: Icon(Icons.menu_book_rounded),
+                label: '가계부',
+              ),
+              NavigationDestination(
+                icon: _ScanNavIcon(),
+                label: '스캔',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.emoji_events_outlined),
+                selectedIcon: Icon(Icons.emoji_events_rounded),
+                label: '랭킹',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.person_outline_rounded),
+                selectedIcon: Icon(Icons.person_rounded),
+                label: '마이',
+              ),
+            ],
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.camera_alt_outlined),
-            label: 'Scan',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.emoji_events_outlined),
-            label: 'Ranking',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            label: 'My',
-          ),
-        ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ScanNavIcon extends StatelessWidget {
+  const _ScanNavIcon();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 42,
+      height: 42,
+      decoration: const BoxDecoration(
+        color: EcoColors.primary,
+        shape: BoxShape.circle,
+      ),
+      child: const Icon(
+        Icons.document_scanner_outlined,
+        color: Colors.white,
+        size: 23,
       ),
     );
   }
