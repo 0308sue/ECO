@@ -340,8 +340,25 @@ public class MyPageService {
             List<QueryDocumentSnapshot> receipts,
             YearMonth currentMonth
     ) {
-        return countMonthlyReceipts(receipts, currentMonth.minusMonths(1)) == 0
-                && countMonthlyReceipts(receipts, currentMonth) > 0;
+        YearMonth previousMonth = currentMonth.minusMonths(1);
+
+        return countMonthlyReceipts(receipts, previousMonth) == 0
+                && countMonthlyReceipts(receipts, currentMonth) > 0
+                && hasReceiptBefore(receipts, previousMonth);
+    }
+
+    private boolean hasReceiptBefore(
+            List<QueryDocumentSnapshot> receipts,
+            YearMonth baseMonth
+    ) {
+        for (QueryDocumentSnapshot receipt : receipts) {
+            Optional<YearMonth> receiptMonth = readReceiptMonth(receipt);
+            if (receiptMonth.isPresent() && receiptMonth.get().isBefore(baseMonth)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private String findMostConsumedCategory(List<QueryDocumentSnapshot> receipts) {
@@ -470,6 +487,13 @@ public class MyPageService {
             savedBadgeIds.add(badgeDocument.getId());
         }
 
+        removeInvalidCurrentMonthComebackBadge(
+                userId,
+                receipts,
+                currentMonth,
+                savedBadgeIds
+        );
+
         for (MyPageBadgeResponse badge : buildBadgeCandidates(
                 receipts,
                 receiptAnalysisCount,
@@ -493,6 +517,24 @@ public class MyPageService {
                         .comparingInt(MyPageBadgeResponse::getSortOrder)
                         .thenComparing(MyPageBadgeResponse::getId))
                 .toList();
+    }
+
+    private void removeInvalidCurrentMonthComebackBadge(
+            String userId,
+            List<QueryDocumentSnapshot> receipts,
+            YearMonth currentMonth,
+            Set<String> savedBadgeIds
+    ) {
+        String monthKey = currentMonth.format(DateTimeFormatter.ofPattern("yyyy_MM"));
+        String comebackBadgeId = "comeback_practitioner_" + monthKey;
+
+        if (
+                savedBadgeIds.contains(comebackBadgeId)
+                        && !hasComebackConsumption(receipts, currentMonth)
+        ) {
+            myPageRepository.deleteBadge(userId, comebackBadgeId);
+            savedBadgeIds.remove(comebackBadgeId);
+        }
     }
 
     private List<MyPageBadgeResponse> buildBadgeCandidates(

@@ -116,4 +116,21 @@ public class MyPageRepository {
             throw new IllegalStateException("Firestore에 배지를 저장하지 못했습니다.", e);
         }
     }
+
+    public void deleteBadge(String userId, String badgeId) {
+        try {
+            firestore
+                    .collection("users")
+                    .document(userId)
+                    .collection("badges")
+                    .document(badgeId)
+                    .delete()
+                    .get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("배지 삭제 중 작업이 중단되었습니다.", e);
+        } catch (ExecutionException e) {
+            throw new IllegalStateException("Firestore에서 배지를 삭제하지 못했습니다.", e);
+        }
+    }
 }
