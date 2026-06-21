@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 import '../../core/constants/api_constants.dart';
+import '../../core/theme/eco_design_system.dart';
 import '../recommendation/recommendation_result_page.dart';
 
 class ReceiptResultPage extends StatefulWidget {
@@ -25,10 +26,12 @@ class ReceiptResultPage extends StatefulWidget {
   final List<Map<String, dynamic>> items;
 
   @override
-  State<ReceiptResultPage> createState() => _ReceiptResultPageState();
+  State<ReceiptResultPage> createState() =>
+      _ReceiptResultPageState();
 }
 
-class _ReceiptResultPageState extends State<ReceiptResultPage> {
+class _ReceiptResultPageState
+    extends State<ReceiptResultPage> {
   bool _isSaving = true;
   String? _errorMessage;
 
@@ -62,7 +65,9 @@ class _ReceiptResultPageState extends State<ReceiptResultPage> {
         }),
       );
 
-      final decodedBody = utf8.decode(response.bodyBytes);
+      final decodedBody = utf8.decode(
+        response.bodyBytes,
+      );
 
       if (!mounted) {
         return;
@@ -80,14 +85,16 @@ class _ReceiptResultPageState extends State<ReceiptResultPage> {
           });
         } else {
           setState(() {
-            _errorMessage = '저장 결과 형식이 올바르지 않습니다.';
+            _errorMessage =
+                '저장 결과 형식이 올바르지 않습니다.';
             _isSaving = false;
           });
         }
       } else {
         setState(() {
           _errorMessage =
-              '저장 오류 ${response.statusCode}: $decodedBody';
+              '저장 오류 ${response.statusCode}: '
+              '$decodedBody';
           _isSaving = false;
         });
       }
@@ -106,12 +113,14 @@ class _ReceiptResultPageState extends State<ReceiptResultPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('저장 결과'),
-      ),
-      body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 300),
-        child: _buildBody(),
+      backgroundColor: EcoColors.background,
+      body: SafeArea(
+        child: AnimatedSwitcher(
+          duration: const Duration(
+            milliseconds: 300,
+          ),
+          child: _buildBody(),
+        ),
       ),
     );
   }
@@ -133,32 +142,149 @@ class _ReceiptResultPageState extends State<ReceiptResultPage> {
   }
 
   Widget _buildSavingView() {
-    return const Center(
-      key: ValueKey('saving'),
-      child: Padding(
-        padding: EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+    return SingleChildScrollView(
+      key: const ValueKey('saving'),
+      padding: const EdgeInsets.fromLTRB(
+        20,
+        20,
+        20,
+        40,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildHeader(
+            title: '영수증 저장',
+            subtitle: '소비 내역을 분석하고 있어요.',
+          ),
+          const SizedBox(height: 20),
+          _buildSavingCard(),
+          const SizedBox(height: 14),
+          EcoCard(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 17,
+              vertical: 15,
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: EcoColors.primary.withValues(
+                      alpha: 0.12,
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(
+                    Icons.eco_outlined,
+                    color: EcoColors.secondary,
+                    size: 21,
+                  ),
+                ),
+                const SizedBox(width: 13),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment:
+                        CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '탄소 소비 분석 중',
+                        style: TextStyle(
+                          color: EcoColors.text,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      SizedBox(height: 3),
+                      Text(
+                        '잠시만 기다려 주세요.',
+                        style: TextStyle(
+                          color: EcoColors.muted,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSavingCard() {
+    return EcoCard(
+      color: EcoColors.secondary,
+      radius: 28,
+      padding: EdgeInsets.zero,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(28),
+        child: Stack(
           children: [
-            SizedBox(
-              width: 56,
-              height: 56,
-              child: CircularProgressIndicator(
-                strokeWidth: 5,
+            Positioned(
+              right: -44,
+              top: -58,
+              child: Container(
+                width: 160,
+                height: 160,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(
+                    alpha: 0.05,
+                  ),
+                  shape: BoxShape.circle,
+                ),
               ),
             ),
-            SizedBox(height: 24),
-            Text(
-              '영수증을 저장하고 있어요',
-              style: TextStyle(
-                fontSize: 21,
-                fontWeight: FontWeight.bold,
+            Positioned(
+              left: -40,
+              bottom: -70,
+              child: Container(
+                width: 145,
+                height: 145,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(
+                    alpha: 0.035,
+                  ),
+                  shape: BoxShape.circle,
+                ),
               ),
             ),
-            SizedBox(height: 8),
-            Text(
-              '소비 내역과 탄소 배출량을 분석하는 중입니다.',
-              textAlign: TextAlign.center,
+            const Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: 24,
+                vertical: 36,
+              ),
+              child: Column(
+                children: [
+                  _SavingIndicator(),
+                  SizedBox(height: 22),
+                  Text(
+                    '영수증을 저장하고 있어요',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    '품목을 분류하고 탄소 배출량을\n계산하는 중입니다.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Color(0xFFD5E7DA),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      height: 1.5,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -167,40 +293,102 @@ class _ReceiptResultPageState extends State<ReceiptResultPage> {
   }
 
   Widget _buildErrorView() {
-    return Center(
+    return SingleChildScrollView(
       key: const ValueKey('error'),
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.error_outline_rounded,
-              size: 64,
-              color: Theme.of(context).colorScheme.error,
+      padding: const EdgeInsets.fromLTRB(
+        20,
+        20,
+        20,
+        40,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildHeader(
+            title: '저장 결과',
+            subtitle: '영수증 저장 상태를 확인해요.',
+          ),
+          const SizedBox(height: 20),
+          EcoCard(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 24,
+              vertical: 32,
             ),
-            const SizedBox(height: 16),
-            const Text(
-              '영수증을 저장하지 못했어요',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 21,
-                fontWeight: FontWeight.bold,
-              ),
+            child: Column(
+              children: [
+                Container(
+                  width: 78,
+                  height: 78,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .errorContainer,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.error_outline_rounded,
+                    color:
+                        Theme.of(context).colorScheme.error,
+                    size: 41,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  '영수증을 저장하지 못했어요',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: EcoColors.text,
+                    fontSize: 21,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.4,
+                  ),
+                ),
+                const SizedBox(height: 9),
+                Text(
+                  _errorMessage ??
+                      '알 수 없는 오류가 발생했습니다.',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: EcoColors.muted,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: _saveReceipt,
+                    style: FilledButton.styleFrom(
+                      backgroundColor:
+                          EcoColors.secondary,
+                      foregroundColor: Colors.white,
+                      minimumSize:
+                          const Size.fromHeight(52),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.circular(18),
+                      ),
+                    ),
+                    icon: const Icon(
+                      Icons.refresh_rounded,
+                      size: 20,
+                    ),
+                    label: const Text(
+                      '다시 시도',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 10),
-            Text(
-              _errorMessage ?? '알 수 없는 오류가 발생했습니다.',
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            FilledButton.icon(
-              onPressed: _saveReceipt,
-              icon: const Icon(Icons.refresh),
-              label: const Text('다시 시도'),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -216,55 +404,43 @@ class _ReceiptResultPageState extends State<ReceiptResultPage> {
 
     return SingleChildScrollView(
       key: const ValueKey('success'),
-      padding: const EdgeInsets.fromLTRB(16, 32, 16, 48),
+      padding: const EdgeInsets.fromLTRB(
+        20,
+        20,
+        20,
+        50,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Center(
-            child: Container(
-              width: 96,
-              height: 96,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Theme.of(context)
-                    .colorScheme
-                    .primaryContainer,
-              ),
-              child: Icon(
-                Icons.check_rounded,
-                size: 60,
-                color: Theme.of(context)
-                    .colorScheme
-                    .onPrimaryContainer,
-              ),
-            ),
+          _buildHeader(
+            title: '분석 결과',
+            subtitle: '이번 소비의 탄소 정보를 확인해요.',
           ),
           const SizedBox(height: 20),
+          _buildSuccessCard(summary),
+          const SizedBox(height: 26),
           const Text(
-            '저장이 완료되었어요!',
-            textAlign: TextAlign.center,
+            '친환경 추천',
             style: TextStyle(
-              fontSize: 25,
-              fontWeight: FontWeight.bold,
+              color: EcoColors.text,
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.4,
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            '저장된 소비 내역을 기준으로\n친환경 대안을 추천해 드릴게요.',
-            textAlign: TextAlign.center,
+          const SizedBox(height: 5),
+          const Text(
+            '저장된 소비 내역을 바탕으로 추천했어요.',
             style: TextStyle(
-              height: 1.5,
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurfaceVariant,
+              color: EcoColors.muted,
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              letterSpacing: -0.15,
+              height: 1.4,
             ),
           ),
-          const SizedBox(height: 28),
-
-          _buildSummaryCard(summary),
-
-          const SizedBox(height: 32),
-
+          const SizedBox(height: 18),
           RecommendationResultSection(
             savedResult: savedResult,
           ),
@@ -273,46 +449,419 @@ class _ReceiptResultPageState extends State<ReceiptResultPage> {
     );
   }
 
-  Widget _buildSummaryCard(
+  Widget _buildSuccessCard(
     Map<String, dynamic> summary,
   ) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    final topCategory =
+        '${summary['topCategory'] ?? ''}'.trim();
+
+    return EcoCard(
+      color: EcoColors.secondary,
+      radius: 28,
+      padding: EdgeInsets.zero,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(28),
+        child: Stack(
           children: [
-            const Text(
-              '이번 소비 요약',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+            Positioned(
+              right: -50,
+              top: -66,
+              child: Container(
+                width: 180,
+                height: 180,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(
+                    alpha: 0.05,
+                  ),
+                  shape: BoxShape.circle,
+                ),
               ),
             ),
-            const SizedBox(height: 14),
-            Text(
-              '총 금액: ${summary['totalPrice'] ?? '-'}원',
+            Positioned(
+              left: -42,
+              bottom: -70,
+              child: Container(
+                width: 155,
+                height: 155,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(
+                    alpha: 0.035,
+                  ),
+                  shape: BoxShape.circle,
+                ),
+              ),
             ),
-            const SizedBox(height: 6),
-            Text(
-              '총 추정 탄소량: '
-              '${summary['totalEstimatedCarbonKg'] ?? '-'}kg CO₂-eq',
-            ),
-            const SizedBox(height: 6),
-            Text(
-              '평균 탄소 점수: '
-              '${summary['averageCarbonScore'] ?? '-'}',
-            ),
-            const SizedBox(height: 6),
-            Text(
-              '품목 수: ${summary['itemCount'] ?? '-'}개',
-            ),
-            const SizedBox(height: 6),
-            Text(
-              '주요 카테고리: '
-              '${summary['topCategory'] ?? '-'}',
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                22,
+                24,
+                22,
+                24,
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    width: 70,
+                    height: 70,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(
+                        alpha: 0.15,
+                      ),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.check_rounded,
+                      color: Colors.white,
+                      size: 43,
+                    ),
+                  ),
+                  const SizedBox(height: 15),
+                  const Text(
+                    '저장이 완료되었어요!',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 23,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.6,
+                    ),
+                  ),
+                  const SizedBox(height: 7),
+                  const Text(
+                    '소비 내역과 탄소 배출량 분석이 완료되었습니다.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Color(0xFFD5E7DA),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      height: 1.5,
+                    ),
+                  ),
+                  if (topCategory.isNotEmpty) ...[
+                    const SizedBox(height: 13),
+                    EcoPill(
+                      label: '주요 카테고리 · $topCategory',
+                      icon: Icons.category_outlined,
+                      background: Colors.white.withValues(
+                        alpha: 0.15,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 22),
+                  Container(
+                    height: 1,
+                    color: Colors.white.withValues(
+                      alpha: 0.14,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _SummaryMetric(
+                          label: '총 금액',
+                          value: _formatWon(
+                            summary['totalPrice'],
+                          ),
+                          icon: Icons.payments_outlined,
+                        ),
+                      ),
+                      const _MetricDivider(),
+                      Expanded(
+                        child: _SummaryMetric(
+                          label: '탄소 배출량',
+                          value: _formatCarbon(
+                            summary[
+                                'totalEstimatedCarbonKg'],
+                          ),
+                          icon: Icons.cloud_outlined,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _SummaryMetric(
+                          label: '평균 탄소 점수',
+                          value: _displayValue(
+                            summary['averageCarbonScore'],
+                          ),
+                          icon: Icons.eco_outlined,
+                        ),
+                      ),
+                      const _MetricDivider(),
+                      Expanded(
+                        child: _SummaryMetric(
+                          label: '품목 수',
+                          value:
+                              '${_displayValue(summary['itemCount'])}개',
+                          icon:
+                              Icons.receipt_long_outlined,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader({
+    required String title,
+    required String subtitle,
+  }) {
+    return Row(
+      children: [
+        _RoundIconButton(
+          icon: Icons.chevron_left_rounded,
+          onTap: () => Navigator.maybePop(
+            context,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  color: EcoColors.text,
+                  fontSize: 28,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.9,
+                  height: 1.05,
+                ),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                subtitle,
+                style: const TextStyle(
+                  color: EcoColors.muted,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: -0.2,
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _formatWon(dynamic value) {
+    final amount = _parseNumber(value);
+
+    if (amount == null) {
+      return '-';
+    }
+
+    return '${_comma(amount.round())}원';
+  }
+
+  String _formatCarbon(dynamic value) {
+    final carbon = _parseNumber(value);
+
+    if (carbon == null) {
+      return '-';
+    }
+
+    return '${_compactNumber(carbon)}kg';
+  }
+
+  String _displayValue(dynamic value) {
+    if (value == null) {
+      return '-';
+    }
+
+    if (value is num) {
+      return _compactNumber(
+        value.toDouble(),
+      );
+    }
+
+    final text = value.toString().trim();
+
+    return text.isEmpty ? '-' : text;
+  }
+
+  double? _parseNumber(dynamic value) {
+    if (value is num) {
+      return value.toDouble();
+    }
+
+    return double.tryParse(
+      value?.toString() ?? '',
+    );
+  }
+
+  String _compactNumber(double value) {
+    if (value == value.roundToDouble()) {
+      return value.toInt().toString();
+    }
+
+    return value
+        .toStringAsFixed(2)
+        .replaceFirst(
+          RegExp(r'0+$'),
+          '',
+        )
+        .replaceFirst(
+          RegExp(r'\.$'),
+          '',
+        );
+  }
+
+  String _comma(int number) {
+    final value = number.abs().toString();
+
+    final buffer = StringBuffer();
+
+    for (int i = 0; i < value.length; i++) {
+      final reverseIndex = value.length - i;
+
+      buffer.write(value[i]);
+
+      if (reverseIndex > 1 &&
+          reverseIndex % 3 == 1) {
+        buffer.write(',');
+      }
+    }
+
+    return number < 0
+        ? '-$buffer'
+        : buffer.toString();
+  }
+}
+
+class _SavingIndicator extends StatelessWidget {
+  const _SavingIndicator();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 82,
+      height: 82,
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(
+          alpha: 0.14,
+        ),
+        shape: BoxShape.circle,
+      ),
+      child: const Padding(
+        padding: EdgeInsets.all(24),
+        child: CircularProgressIndicator(
+          color: Colors.white,
+          strokeWidth: 4,
+        ),
+      ),
+    );
+  }
+}
+
+class _SummaryMetric extends StatelessWidget {
+  const _SummaryMetric({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
+
+  final String label;
+  final String value;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Icon(
+          icon,
+          color: const Color(0xFFD5E7DA),
+          size: 18,
+        ),
+        const SizedBox(height: 7),
+        Text(
+          value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 17,
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.3,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: Color(0xFFD5E7DA),
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MetricDivider extends StatelessWidget {
+  const _MetricDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 1,
+      height: 48,
+      color: Colors.white.withValues(
+        alpha: 0.14,
+      ),
+    );
+  }
+}
+
+class _RoundIconButton extends StatelessWidget {
+  const _RoundIconButton({
+    required this.icon,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: onTap,
+        child: Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: EcoColors.line,
+            ),
+            boxShadow: EcoShadow.soft,
+          ),
+          child: Icon(
+            icon,
+            color: EcoColors.text,
+            size: 27,
+          ),
         ),
       ),
     );

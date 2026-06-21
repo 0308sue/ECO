@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/theme/eco_design_system.dart';
 import '../dashboard/carbon_dashboard_page.dart';
 import '../ranking/model/ranking_user.dart';
 import '../ranking/service/ranking_service.dart';
@@ -13,12 +14,12 @@ class HomePage extends StatefulWidget {
     required this.onTapEcoPlaceMap,
   });
 
-  static const Color backgroundColor = Color(0xFFF7FAF2);
-  static const Color primaryColor = Color(0xFF3B713B);
-  static const Color darkGreen = Color(0xFF244D2A);
+  static const Color backgroundColor =EcoColors.background;
+  static const Color primaryColor = EcoColors.primary;
+  static const Color darkGreen = EcoColors.secondary;
   static const Color cardColor = Colors.white;
-  static const Color textColor = Color(0xFF222820);
-  static const Color subTextColor = Color(0xFF5A6358);
+  static const Color textColor = EcoColors.text;
+  static const Color subTextColor = EcoColors.muted;
 
   final String userId;
   final VoidCallback onTapScan;
@@ -117,19 +118,24 @@ class _HomePageState extends State<HomePage> {
                   onRefresh: _refresh,
                   child: SingleChildScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 112),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildHeader(),
-                        const SizedBox(height: 20),
+                        _buildHeader(currentUser),
+                        const SizedBox(height: 24),
                         _CarbonSummaryCard(
                           ecoPoint: currentUser?.ecoPoint,
+                          grade: currentUser?.grade,
                           monthlyCarbonScore:
                               dashboardData.monthlyCarbonScore,
                           weeklyAmount: dashboardData.weeklyAmount,
                           topCategory: dashboardData.topCategory,
-                          onTapDetail: () {
+                        ),
+                        const SizedBox(height: 18),
+                        _DashboardPreviewCard(
+                          data: dashboardData,
+                          onTap: () {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
@@ -140,34 +146,14 @@ class _HomePageState extends State<HomePage> {
                             );
                           },
                         ),
+                        const SizedBox(height: 18),
+                        _WarningCategoryCard(
+                          topCategory: dashboardData.topCategory,
+                        ),
                         const SizedBox(height: 26),
                         _buildQuickButtons(),
                         const SizedBox(height: 28),
-                        Row(
-                          children: [
-                            const Expanded(
-                              child: Text(
-                                '최근 소비 기록',
-                                style: TextStyle(
-                                  color: HomePage.textColor,
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: -0.5,
-                                ),
-                              ),
-                            ),
-                            TextButton(
-                              onPressed: widget.onTapScan,
-                              child: const Text(
-                                '스캔하기',
-                                style: TextStyle(
-                                  color: HomePage.primaryColor,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                        const EcoSectionHeader(title: '최근 소비 기록'),
                         const SizedBox(height: 12),
                         if (recentRecords.isEmpty)
                           const _EmptyRecentPanel()
@@ -194,26 +180,48 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildHeader() {
-    return const Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildHeader(RankingUser? currentUser) {
+    final nickname = currentUser?.nickname ?? 'ECO User';
+
+    return Row(
       children: [
-        Text(
-          'ECO',
-          style: TextStyle(
-            color: HomePage.darkGreen,
-            fontSize: 30,
-            fontWeight: FontWeight.w900,
-            letterSpacing: -0.8,
-          ),
-        ),
-        SizedBox(height: 6),
-        Text(
-          '나의 탄소 소비를 한눈에 확인해요',
-          style: TextStyle(
-            color: HomePage.subTextColor,
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(
+                children: [
+                  Text(
+                    '안녕하세요',
+                    style: TextStyle(
+                      color: EcoColors.muted,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                  SizedBox(width: 4),
+                  Icon(
+                    Icons.eco_rounded,
+                    size: 13,
+                    color: EcoColors.primary,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 2),
+              Text(
+                nickname,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: EcoColors.text,
+                  fontSize: 30,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -1.1,
+                  height: 1.0,
+                ),
+              ),
+            ],
           ),
         ),
       ],
@@ -235,7 +243,7 @@ class _HomePageState extends State<HomePage> {
         Expanded(
           child: _QuickActionCard(
             title: '추천 보기',
-            description: '친환경 장소 확인',
+            description: '제로웨이스트 장소 확인',
             icon: Icons.eco_rounded,
             onTap: widget.onTapEcoPlaceMap,
           ),
@@ -248,17 +256,17 @@ class _HomePageState extends State<HomePage> {
 class _CarbonSummaryCard extends StatelessWidget {
   const _CarbonSummaryCard({
     required this.ecoPoint,
+    required this.grade,
     required this.monthlyCarbonScore,
     required this.weeklyAmount,
     required this.topCategory,
-    required this.onTapDetail,
   });
 
   final int? ecoPoint;
+  final String? grade;
   final int monthlyCarbonScore;
   final int weeklyAmount;
   final String topCategory;
-  final VoidCallback onTapDetail;
 
   @override
   Widget build(BuildContext context) {
@@ -266,15 +274,15 @@ class _CarbonSummaryCard extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(22),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: HomePage.darkGreen,
+        color: EcoColors.secondary,
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.12),
-            blurRadius: 14,
-            offset: const Offset(0, 7),
+            color: EcoColors.secondary.withValues(alpha: 0.18),
+            blurRadius: 28,
+            offset: const Offset(0, 16),
           ),
         ],
       ),
@@ -285,56 +293,38 @@ class _CarbonSummaryCard extends StatelessWidget {
             '이번 달 탄소 소비 점수',
             style: TextStyle(
               color: Color(0xFFD8E8D4),
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
+              fontSize: 20,
+              fontWeight: FontWeight.w500,
             ),
           ),
           const SizedBox(height: 8),
-          Text(
-            '$monthlyCarbonScore점',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 40,
-              fontWeight: FontWeight.w900,
-              letterSpacing: -1,
-            ),
-          ),
-          const SizedBox(height: 14),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.13),
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.emoji_events_outlined,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '$monthlyCarbonScore',
+                style: const TextStyle(
                   color: Colors.white,
-                  size: 22,
+                  fontSize: 48,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -1.2,
+                  height: 1,
                 ),
-                const SizedBox(width: 10),
-                const Text(
-                  '내 에코 포인트',
+              ),
+              const Padding(
+                padding: EdgeInsets.only(left: 6, bottom: 4),
+                child: Text(
+                  '점',
                   style: TextStyle(
-                    color: Color(0xFFD8E8D4),
-                    fontWeight: FontWeight.w700,
+                    color: Color(0xFFCDE2D4),
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-                const Spacer(),
-                Text(
-                  ecoPoint == null ? '-' : '${_formatNumber(ecoPoint!)} pts',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 22),
           Row(
             children: [
               Expanded(
@@ -352,26 +342,25 @@ class _CarbonSummaryCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 18),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: onTapDetail,
-              style: FilledButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: HomePage.darkGreen,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: _HeroInfoRow(
+                  icon: Icons.toll_rounded,
+                  label: '에코 포인트',
+                  value: ecoPoint == null ? '-' : _formatNumber(ecoPoint!),
                 ),
               ),
-              child: const Text(
-                '탄소 대시보드 자세히 보기',
-                style: TextStyle(
-                  fontWeight: FontWeight.w900,
+              const SizedBox(width: 10),
+              Expanded(
+                child: _HeroInfoRow(
+                  icon: Icons.workspace_premium_rounded,
+                  label: 'Eco Level',
+                  value: grade ?? 'Seed',
                 ),
               ),
-            ),
+            ],
           ),
         ],
       ),
@@ -415,7 +404,188 @@ class _MiniInfoBox extends StatelessWidget {
             style: const TextStyle(
               color: Colors.white,
               fontSize: 16,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HeroInfoRow extends StatelessWidget {
+  const _HeroInfoRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.13),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: Colors.white, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Color(0xFFCDE2D4),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _WarningCategoryCard extends StatelessWidget {
+  const _WarningCategoryCard({required this.topCategory});
+
+  final String topCategory;
+
+  @override
+  Widget build(BuildContext context) {
+    final category = topCategory.isEmpty ? '소비 기록' : topCategory;
+    final message = topCategory.isEmpty
+        ? '영수증을 분석하면 탄소 배출이 높은 카테고리를 알려드려요.'
+        : '이번 주에는 $category 소비 비중이 가장 높아요.';
+
+    return EcoCard(
+      padding: const EdgeInsets.all(18),
+      border: Border.all(color: EcoColors.line),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: EcoColors.accent.withValues(alpha: 0.18),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Icon(
+              Icons.trending_up_rounded,
+              color: Color(0xFFB88E12),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '주의 카테고리 · $category',
+                  style: const TextStyle(
+                    color: EcoColors.text,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  message,
+                  style: const TextStyle(
+                    color: EcoColors.muted,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    height: 1.35,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DashboardPreviewCard extends StatelessWidget {
+  const _DashboardPreviewCard({
+    required this.data,
+    required this.onTap,
+  });
+
+  final DashboardData data;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final progress = data.maxCategoryScore == 0
+        ? 0.0
+        : (data.monthlyCarbonScore / (data.maxCategoryScore * 3)).clamp(0.0, 1.0);
+
+    return EcoCard(
+      onTap: onTap,
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '탄소 대시보드',
+                  style: TextStyle(
+                    color: EcoColors.text,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded, color: EcoColors.muted),
+            ],
+          ),
+          const SizedBox(height: 14),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 10,
+              color: EcoColors.primary,
+              backgroundColor: EcoColors.line,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            data.topCategory.isEmpty
+                ? '분석할 소비 기록을 기다리고 있어요.'
+                : '${data.topCategory} 카테고리를 중심으로 소비 패턴을 분석했어요.',
+            style: const TextStyle(
+              color: EcoColors.muted,
+              fontWeight: FontWeight.w700,
+              height: 1.35,
             ),
           ),
         ],
@@ -441,29 +611,31 @@ class _QuickActionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: HomePage.cardColor,
-      borderRadius: BorderRadius.circular(22),
+      borderRadius: BorderRadius.circular(20),
       child: InkWell(
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(20),
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.all(17),
+          padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: EcoShadow.soft,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(
-                icon,
-                color: HomePage.primaryColor,
-                size: 28,
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: EcoColors.primary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                child: Icon(
+                  icon,
+                  color: EcoColors.secondary,
+                  size: 24,
+                ),
               ),
               const SizedBox(height: 14),
               Text(
@@ -471,7 +643,7 @@ class _QuickActionCard extends StatelessWidget {
                 style: const TextStyle(
                   color: HomePage.textColor,
                   fontSize: 16,
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
               const SizedBox(height: 4),
@@ -507,16 +679,8 @@ class _RecentRecordTile extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: HomePage.primaryColor.withValues(alpha: 0.1),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
-            ),
-          ],
+          border: Border.all(color: EcoColors.line),
+          boxShadow: EcoShadow.soft,
         ),
         child: Row(
           children: [
@@ -524,12 +688,12 @@ class _RecentRecordTile extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: HomePage.primaryColor.withValues(alpha: 0.12),
+                color: EcoColors.primary.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(15),
               ),
               child: const Icon(
                 Icons.receipt_long_rounded,
-                color: HomePage.primaryColor,
+                color: EcoColors.secondary,
                 size: 24,
               ),
             ),
@@ -545,7 +709,7 @@ class _RecentRecordTile extends StatelessWidget {
                     style: const TextStyle(
                       color: HomePage.textColor,
                       fontSize: 16,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -566,14 +730,14 @@ class _RecentRecordTile extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: Colors.orange.shade50,
+                color: EcoColors.accent.withValues(alpha: 0.18),
                 borderRadius: BorderRadius.circular(999),
               ),
               child: Text(
                 '${record.carbonScore}점',
                 style: const TextStyle(
-                  color: Colors.deepOrange,
-                  fontWeight: FontWeight.w900,
+                  color: Color(0xFF9A7411),
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ),
@@ -594,10 +758,10 @@ class _RecommendationMoveCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.teal.shade50,
-      borderRadius: BorderRadius.circular(22),
+      color: const Color(0xFFEAF6EF),
+      borderRadius: BorderRadius.circular(20),
       child: InkWell(
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(20),
         onTap: onTap,
         child: Container(
           width: double.infinity,
@@ -607,7 +771,7 @@ class _RecommendationMoveCard extends StatelessWidget {
               Icon(
                 Icons.eco_rounded,
                 size: 34,
-                color: HomePage.primaryColor,
+                color: EcoColors.secondary,
               ),
               SizedBox(width: 14),
               Expanded(
@@ -619,7 +783,7 @@ class _RecommendationMoveCard extends StatelessWidget {
                       style: TextStyle(
                         color: HomePage.textColor,
                         fontSize: 17,
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                     SizedBox(height: 4),
@@ -636,7 +800,7 @@ class _RecommendationMoveCard extends StatelessWidget {
               ),
               Icon(
                 Icons.chevron_right_rounded,
-                color: HomePage.primaryColor,
+                color: EcoColors.secondary,
               ),
             ],
           ),
@@ -674,7 +838,7 @@ class _EmptyRecentPanel extends StatelessWidget {
             style: TextStyle(
               color: HomePage.textColor,
               fontSize: 16,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w700,
             ),
           ),
           SizedBox(height: 6),

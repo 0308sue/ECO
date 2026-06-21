@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../core/constants/api_constants.dart';
+import '../../core/theme/eco_design_system.dart';
 import 'eco_place.dart';
 import 'eco_place_repository.dart';
 
@@ -11,11 +12,14 @@ class EcoPlaceMapPage extends StatefulWidget {
   const EcoPlaceMapPage({super.key});
 
   @override
-  State<EcoPlaceMapPage> createState() => _EcoPlaceMapPageState();
+  State<EcoPlaceMapPage> createState() =>
+      _EcoPlaceMapPageState();
 }
 
-class _EcoPlaceMapPageState extends State<EcoPlaceMapPage> {
-  final EcoPlaceRepository _repository = EcoPlaceRepository();
+class _EcoPlaceMapPageState
+    extends State<EcoPlaceMapPage> {
+  final EcoPlaceRepository _repository =
+      EcoPlaceRepository();
 
   WebViewController? _webViewController;
 
@@ -34,14 +38,21 @@ class _EcoPlaceMapPageState extends State<EcoPlaceMapPage> {
   Future<void> _loadPlacesAndMap() async {
     try {
       if (kakaoJavascriptAppKey.isEmpty) {
-        throw Exception('KAKAO_JAVASCRIPT_APP_KEY가 비어 있습니다.');
+        throw Exception(
+          'KAKAO_JAVASCRIPT_APP_KEY가 비어 있습니다.',
+        );
       }
 
-      final places = await _repository.fetchPlaces();
+      final places =
+          await _repository.fetchPlaces();
 
       final controller = WebViewController()
-        ..setJavaScriptMode(JavaScriptMode.unrestricted)
-        ..setBackgroundColor(const Color(0x00000000))
+        ..setJavaScriptMode(
+          JavaScriptMode.unrestricted,
+        )
+        ..setBackgroundColor(
+          const Color(0x00000000),
+        )
         ..addJavaScriptChannel(
           'EcoPlaceChannel',
           onMessageReceived: (message) {
@@ -70,7 +81,9 @@ class _EcoPlaceMapPageState extends State<EcoPlaceMapPage> {
   }
 
   void _selectPlace(String placeId) {
-    final matches = _places.where((place) => place.id == placeId);
+    final matches = _places.where(
+      (place) => place.id == placeId,
+    );
 
     if (matches.isEmpty) {
       return;
@@ -81,7 +94,9 @@ class _EcoPlaceMapPageState extends State<EcoPlaceMapPage> {
     });
   }
 
-  String _buildMapHtml(List<EcoPlace> places) {
+  String _buildMapHtml(
+    List<EcoPlace> places,
+  ) {
     final placesJson = jsonEncode(
       places.map((place) {
         return {
@@ -185,7 +200,11 @@ class _EcoPlaceMapPageState extends State<EcoPlaceMapPage> {
         places.forEach(function (place) {
           if (!place.lat || !place.lng) return;
 
-          const position = new kakao.maps.LatLng(place.lat, place.lng);
+          const position = new kakao.maps.LatLng(
+            place.lat,
+            place.lng
+          );
+
           bounds.extend(position);
 
           const marker = new kakao.maps.Marker({
@@ -193,21 +212,29 @@ class _EcoPlaceMapPageState extends State<EcoPlaceMapPage> {
             title: place.placeName
           });
 
-          kakao.maps.event.addListener(marker, 'click', function () {
-            const content =
-              '<div style="padding:8px 10px;font-size:13px;white-space:nowrap;">' +
-              '<strong>' + escapeHtml(place.placeName) + '</strong><br/>' +
-              escapeHtml(place.placeType) +
-              '</div>';
+          kakao.maps.event.addListener(
+            marker,
+            'click',
+            function () {
+              const content =
+                '<div style="padding:8px 10px;font-size:13px;white-space:nowrap;">' +
+                '<strong>' +
+                escapeHtml(place.placeName) +
+                '</strong><br/>' +
+                escapeHtml(place.placeType) +
+                '</div>';
 
-            infoWindow.setContent(content);
-            infoWindow.open(map, marker);
-            map.panTo(position);
+              infoWindow.setContent(content);
+              infoWindow.open(map, marker);
+              map.panTo(position);
 
-            if (window.EcoPlaceChannel) {
-              window.EcoPlaceChannel.postMessage(place.id);
+              if (window.EcoPlaceChannel) {
+                window.EcoPlaceChannel.postMessage(
+                  place.id
+                );
+              }
             }
-          });
+          );
 
           markers.push(marker);
         });
@@ -232,9 +259,7 @@ class _EcoPlaceMapPageState extends State<EcoPlaceMapPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('친환경 장소 지도'),
-      ),
+      backgroundColor: EcoColors.background,
       body: _buildBody(),
     );
   }
@@ -242,7 +267,9 @@ class _EcoPlaceMapPageState extends State<EcoPlaceMapPage> {
   Widget _buildBody() {
     if (_isLoading) {
       return const Center(
-        child: CircularProgressIndicator(),
+        child: CircularProgressIndicator(
+          color: EcoColors.primary,
+        ),
       );
     }
 
@@ -253,6 +280,12 @@ class _EcoPlaceMapPageState extends State<EcoPlaceMapPage> {
           child: Text(
             _errorMessage!,
             textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: EcoColors.muted,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              height: 1.45,
+            ),
           ),
         ),
       );
@@ -260,26 +293,37 @@ class _EcoPlaceMapPageState extends State<EcoPlaceMapPage> {
 
     if (_webViewController == null) {
       return const Center(
-        child: Text('지도를 불러오지 못했습니다.'),
+        child: Text(
+          '지도를 불러오지 못했습니다.',
+          style: TextStyle(
+            color: EcoColors.muted,
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
       );
     }
 
     return Stack(
       children: [
-        WebViewWidget(controller: _webViewController!),
-
-        Positioned(
-          left: 16,
-          right: 16,
-          top: 16,
-          child: _PlaceCountBadge(count: _places.length),
+        WebViewWidget(
+          controller: _webViewController!,
         ),
-
+        Positioned(
+          left: 20,
+          right: 20,
+          top: 54,
+          child: _MapTopPanel(
+            count: _places.length,
+            onTapBack: () =>
+                Navigator.of(context).maybePop(),
+          ),
+        ),
         if (_selectedPlace != null)
           Positioned(
-            left: 16,
-            right: 16,
-            bottom: 20,
+            left: 20,
+            right: 20,
+            bottom: 32,
             child: _EcoPlaceDetailCard(
               place: _selectedPlace!,
               onClose: () {
@@ -294,105 +338,224 @@ class _EcoPlaceMapPageState extends State<EcoPlaceMapPage> {
   }
 }
 
-class _PlaceCountBadge extends StatelessWidget {
-  final int count;
-
-  const _PlaceCountBadge({
+class _MapTopPanel extends StatelessWidget {
+  const _MapTopPanel({
     required this.count,
+    required this.onTapBack,
   });
+
+  final int count;
+  final VoidCallback onTapBack;
 
   @override
   Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(999),
-          boxShadow: const [
-            BoxShadow(
-              blurRadius: 8,
-              color: Color(0x22000000),
+    return EcoCard(
+      padding: const EdgeInsets.fromLTRB(
+        14,
+        14,
+        15,
+        14,
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: EcoColors.primary.withValues(
+                alpha: 0.14,
+              ),
+              borderRadius: BorderRadius.circular(14),
             ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          child: Text(
-            '전체 장소 $count개',
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
+            child: IconButton(
+              padding: EdgeInsets.zero,
+              onPressed: onTapBack,
+              icon: const Icon(
+                Icons.arrow_back_rounded,
+                color: EcoColors.secondary,
+                size: 22,
+              ),
             ),
           ),
-        ),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment:
+                  CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '친환경 장소',
+                  style: TextStyle(
+                    color: EcoColors.text,
+                    fontSize: 19,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.35,
+                  ),
+                ),
+                SizedBox(height: 3),
+                Text(
+                  '등록된 제로웨이스트 장소를 확인해요.',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: EcoColors.muted,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 10,
+              vertical: 7,
+            ),
+            decoration: BoxDecoration(
+              color: EcoColors.primary.withValues(
+                alpha: 0.12,
+              ),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(
+              '$count곳',
+              style: const TextStyle(
+                color: EcoColors.secondary,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _EcoPlaceDetailCard extends StatelessWidget {
-  final EcoPlace place;
-  final VoidCallback onClose;
-
+class _EcoPlaceDetailCard
+    extends StatelessWidget {
   const _EcoPlaceDetailCard({
     required this.place,
     required this.onClose,
   });
 
+  final EcoPlace place;
+  final VoidCallback onClose;
+
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 8,
-      clipBehavior: Clip.antiAlias,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
+    return EcoCard(
+      padding: const EdgeInsets.fromLTRB(
+        18,
+        16,
+        12,
+        18,
       ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 14, 8, 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    place.placeName,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment:
+            CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: EcoColors.primary.withValues(
+                    alpha: 0.12,
+                  ),
+                  borderRadius: BorderRadius.circular(13),
+                ),
+                child: const Icon(
+                  Icons.place_outlined,
+                  color: EcoColors.secondary,
+                  size: 21,
+                ),
+              ),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Text(
+                  place.placeName,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.3,
+                    color: EcoColors.text,
+                    height: 1.25,
                   ),
                 ),
-                IconButton(
-                  onPressed: onClose,
-                  icon: const Icon(Icons.close),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text(
-              place.placeType,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              place.address,
-              style: const TextStyle(fontSize: 14),
-            ),
-            if (place.reason.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(
-                place.reason,
-                style: const TextStyle(fontSize: 14),
+              IconButton(
+                onPressed: onClose,
+                color: EcoColors.muted,
+                icon: const Icon(
+                  Icons.close_rounded,
+                  size: 21,
+                ),
               ),
             ],
+          ),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 9,
+              vertical: 5,
+            ),
+            decoration: BoxDecoration(
+              color: EcoColors.primary.withValues(
+                alpha: 0.12,
+              ),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(
+              place.placeType,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: EcoColors.secondary,
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(
+                Icons.location_on_outlined,
+                color: EcoColors.muted,
+                size: 17,
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  place.address,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: EcoColors.muted,
+                    fontWeight: FontWeight.w500,
+                    height: 1.4,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (place.reason.isNotEmpty) ...[
+            const SizedBox(height: 9),
+            Text(
+              place.reason,
+              style: const TextStyle(
+                fontSize: 13,
+                color: EcoColors.text,
+                fontWeight: FontWeight.w500,
+                height: 1.45,
+              ),
+            ),
           ],
-        ),
+        ],
       ),
     );
   }
