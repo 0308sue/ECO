@@ -5,15 +5,16 @@ import 'package:http/http.dart' as http;
 
 import '../../core/constants/api_constants.dart';
 import '../../core/theme/eco_design_system.dart';
-import '../place/eco_place_map_page.dart';
 
 class RecommendationResultSection extends StatefulWidget {
   const RecommendationResultSection({
     super.key,
     required this.savedResult,
+    required this.onTapEcoPlaceMap,
   });
 
   final Map<String, dynamic> savedResult;
+  final VoidCallback onTapEcoPlaceMap;
 
   @override
   State<RecommendationResultSection> createState() =>
@@ -194,12 +195,7 @@ class _RecommendationResultSectionState
   }
 
   void _openEcoPlaceMap() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const EcoPlaceMapPage(),
-      ),
-    );
+    widget.onTapEcoPlaceMap();
   }
 
   @override
@@ -280,12 +276,18 @@ class _RecommendationResultSectionState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const EcoSectionHeader(
-          title: '추천 상품',
+        const Text(
+          '제품 추천',
+          style: TextStyle(
+            color: EcoColors.text,
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.4,
+          ),
         ),
         const SizedBox(height: 5),
         const Text(
-          '소비한 품목을 기준으로 친환경 대안을 골라봤어요.',
+          '소비 품목을 바탕으로 친환경 대체 제품을 추천했어요.',
           style: TextStyle(
             color: EcoColors.muted,
             fontSize: 13,
@@ -295,6 +297,7 @@ class _RecommendationResultSectionState
           ),
         ),
         const SizedBox(height: 14),
+
         if (_recommendedItems.isEmpty)
           _EmptyCard(
             icon: Icons.eco_outlined,
@@ -456,6 +459,7 @@ class _RecommendationResultSectionState
           ),
         ),
         const SizedBox(height: 14),
+
         if (_recommendedPlaces.isEmpty)
           _EmptyCard(
             icon: Icons.location_on_outlined,

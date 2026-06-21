@@ -16,6 +16,7 @@ class ReceiptResultPage extends StatefulWidget {
     required this.ocrText,
     required this.ocrLines,
     required this.items,
+    required this.onTapEcoPlaceMap,
   });
 
   final String userId;
@@ -24,6 +25,7 @@ class ReceiptResultPage extends StatefulWidget {
   final String ocrText;
   final List<Map<String, dynamic>> ocrLines;
   final List<Map<String, dynamic>> items;
+  final VoidCallback onTapEcoPlaceMap;
 
   @override
   State<ReceiptResultPage> createState() =>
@@ -420,29 +422,9 @@ class _ReceiptResultPageState
           const SizedBox(height: 20),
           _buildSuccessCard(summary),
           const SizedBox(height: 26),
-          const Text(
-            '친환경 추천',
-            style: TextStyle(
-              color: EcoColors.text,
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              letterSpacing: -0.4,
-            ),
-          ),
-          const SizedBox(height: 5),
-          const Text(
-            '저장된 소비 내역을 바탕으로 추천했어요.',
-            style: TextStyle(
-              color: EcoColors.muted,
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              letterSpacing: -0.15,
-              height: 1.4,
-            ),
-          ),
-          const SizedBox(height: 18),
           RecommendationResultSection(
             savedResult: savedResult,
+            onTapEcoPlaceMap: widget.onTapEcoPlaceMap,
           ),
         ],
       ),
