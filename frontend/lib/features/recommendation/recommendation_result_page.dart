@@ -7,20 +7,28 @@ import '../../core/constants/api_constants.dart';
 import '../../core/theme/eco_design_system.dart';
 import '../place/eco_place_map_page.dart';
 
-class RecommendationResultPage extends StatefulWidget {
-  const RecommendationResultPage({super.key, required this.savedResult});
+class RecommendationResultSection extends StatefulWidget {
+  const RecommendationResultSection({
+    super.key,
+    required this.savedResult,
+  });
 
   final Map<String, dynamic> savedResult;
 
   @override
-  State<RecommendationResultPage> createState() =>
-      _RecommendationResultPageState();
+  State<RecommendationResultSection> createState() =>
+      _RecommendationResultSectionState();
 }
 
-class _RecommendationResultPageState extends State<RecommendationResultPage> {
+class _RecommendationResultSectionState
+    extends State<RecommendationResultSection> {
   bool _isLoading = true;
+
   List<dynamic> _recommendedItems = [];
   List<dynamic> _recommendedPlaces = [];
+
+  String? _itemError;
+  String? _placeError;
 
   @override
   void initState() {
@@ -33,9 +41,16 @@ class _RecommendationResultPageState extends State<RecommendationResultPage> {
     final summary = widget.savedResult['summary'];
 
     if (items is! List || items.isEmpty) {
+      if (!mounted) {
+        return;
+      }
+
       setState(() {
         _isLoading = false;
+        _itemError = '추천에 사용할 저장 품목이 없습니다.';
+        _placeError = '추천에 사용할 저장 품목이 없습니다.';
       });
+
       return;
     }
 
@@ -48,520 +63,623 @@ class _RecommendationResultPageState extends State<RecommendationResultPage> {
     };
 
     try {
-      final itemResponse = await http.post(
-        Uri.parse(recommendationItemsUrl),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(requestBody),
+      final responses = await Future.wait([
+        http.post(
+          Uri.parse(recommendationItemsUrl),
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode(requestBody),
+        ),
+        http.post(
+          Uri.parse(recommendationPlacesUrl),
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode(requestBody),
+        ),
+      ]);
+
+      final itemResponse = responses[0];
+      final placeResponse = responses[1];
+
+      final itemBody = utf8.decode(
+        itemResponse.bodyBytes,
       );
 
-      final placeResponse = await http.post(
-        Uri.parse(recommendationPlacesUrl),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(requestBody),
+      final placeBody = utf8.decode(
+        placeResponse.bodyBytes,
       );
 
-      final itemBody = utf8.decode(itemResponse.bodyBytes);
-      final placeBody = utf8.decode(placeResponse.bodyBytes);
+      debugPrint(
+        '추천 아이템 응답 status: ${itemResponse.statusCode}',
+      );
+      debugPrint(
+        '추천 아이템 응답 body: $itemBody',
+      );
+      debugPrint(
+        '추천 장소 응답 status: ${placeResponse.statusCode}',
+      );
+      debugPrint(
+        '추천 장소 응답 body: $placeBody',
+      );
 
-      debugPrint('추천 아이템 응답 status: ${itemResponse.statusCode}');
-      debugPrint('추천 아이템 응답 body: $itemBody');
+      List<dynamic> recommendedItems = [];
+      List<dynamic> recommendedPlaces = [];
 
-      if (itemResponse.statusCode >= 200 && itemResponse.statusCode < 300) {
+      String? itemError;
+      String? placeError;
+
+      if (itemResponse.statusCode >= 200 &&
+          itemResponse.statusCode < 300) {
         final decodedItems = jsonDecode(itemBody);
+
         if (decodedItems is List) {
-          _recommendedItems = decodedItems;
-          debugPrint('추천 아이템 개수: ${_recommendedItems.length}');
+          recommendedItems = decodedItems;
+        } else {
+          itemError = '추천 상품 응답 형식이 올바르지 않습니다.';
         }
       } else {
-        _showMessage('추천 아이템 조회 실패: ${itemResponse.statusCode}');
+        itemError =
+            '추천 상품을 불러오지 못했습니다. '
+            '(${itemResponse.statusCode})';
       }
 
-      if (placeResponse.statusCode >= 200 && placeResponse.statusCode < 300) {
+      if (placeResponse.statusCode >= 200 &&
+          placeResponse.statusCode < 300) {
         final decodedPlaces = jsonDecode(placeBody);
+
         if (decodedPlaces is List) {
-          _recommendedPlaces = decodedPlaces;
+          recommendedPlaces = decodedPlaces;
+        } else {
+          placeError = '추천 장소 응답 형식이 올바르지 않습니다.';
         }
       } else {
-        _showMessage('추천 장소 조회 실패: ${placeResponse.statusCode}');
+        placeError =
+            '추천 장소를 불러오지 못했습니다. '
+            '(${placeResponse.statusCode})';
       }
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _recommendedItems = recommendedItems;
+        _recommendedPlaces = recommendedPlaces;
+        _itemError = itemError;
+        _placeError = placeError;
+        _isLoading = false;
+      });
     } catch (e) {
-      _showMessage('추천 요청 오류: $e');
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+      if (!mounted) {
+        return;
       }
+
+      setState(() {
+        _recommendedItems = [];
+        _recommendedPlaces = [];
+        _itemError = '추천 상품 요청 중 오류가 발생했습니다.';
+        _placeError = '추천 장소 요청 중 오류가 발생했습니다.';
+        _isLoading = false;
+      });
+
+      debugPrint('추천 요청 오류: $e');
     }
   }
 
-  void _showMessage(String message) {
-    if (!mounted) return;
+  void _retryRecommendations() {
+    setState(() {
+      _isLoading = true;
+      _recommendedItems = [];
+      _recommendedPlaces = [];
+      _itemError = null;
+      _placeError = null;
+    });
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    _loadRecommendations();
   }
 
-  Map<String, dynamic>? get _summary {
-    final summary = widget.savedResult['summary'];
-    if (summary is Map<String, dynamic>) {
-      return summary;
+  String _readText(
+    Map<String, dynamic> map,
+    String key,
+  ) {
+    final value = map[key];
+
+    if (value == null) {
+      return '';
     }
-    return null;
-  }
 
-  @override
-  Widget build(BuildContext context) {
-    final summary = _summary;
-
-    return Scaffold(
-      backgroundColor: EcoColors.background,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 34),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _buildHeader(),
-              const SizedBox(height: 18),
-              _buildHeroCard(summary),
-              const SizedBox(height: 22),
-              if (_isLoading)
-                _buildLoadingCard()
-              else ...[
-                _buildRecommendedItemsCard(),
-                const SizedBox(height: 22),
-                _buildRecommendedPlacesCard(),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Row(
-      children: [
-        _RoundIconButton(
-          icon: Icons.chevron_left_rounded,
-          onTap: () => Navigator.maybePop(context),
-        ),
-        const SizedBox(width: 12),
-        const Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '추천 결과',
-                style: TextStyle(
-                  color: EcoColors.text,
-                  fontSize: 30,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -0.8,
-                ),
-              ),
-              SizedBox(height: 4),
-              Text(
-                '이번 소비를 더 친환경적으로 바꿔봐요',
-                style: TextStyle(
-                  color: EcoColors.muted,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildHeroCard(Map<String, dynamic>? summary) {
-    final totalPrice = summary?['totalPrice'] ?? '-';
-    final carbonScore = summary?['averageCarbonScore'] ?? '-';
-    final topCategory = summary?['topCategory'] ?? '-';
-    final itemCount = summary?['itemCount'] ?? '-';
-
-    return EcoCard(
-      color: EcoColors.secondary,
-      radius: 28,
-      padding: const EdgeInsets.fromLTRB(22, 22, 22, 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.16),
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: const Icon(
-                  Icons.eco_rounded,
-                  color: Colors.white,
-                  size: 28,
-                ),
-              ),
-              const SizedBox(width: 14),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '소비 분석 완료',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      '추천 상품과 장소를 확인해요',
-                      style: TextStyle(
-                        color: Color(0xFFD5E7DA),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 22),
-          Row(
-            children: [
-              Expanded(
-                child: _DarkMetric(label: '총 금액', value: '$totalPrice원'),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _DarkMetric(label: '탄소 점수', value: '$carbonScore'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: _DarkMetric(label: '품목', value: '$itemCount개'),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _DarkMetric(label: '주요 카테고리', value: '$topCategory'),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLoadingCard() {
-    return EcoCard(
-      child: Column(
-        children: [
-          const SizedBox(height: 8),
-          CircularProgressIndicator(
-            color: EcoColors.primary,
-            backgroundColor: EcoColors.primary.withValues(alpha: 0.12),
-          ),
-          const SizedBox(height: 18),
-          const Text(
-            '추천 결과를 불러오는 중이에요',
-            style: TextStyle(
-              color: EcoColors.text,
-              fontSize: 17,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            '품목과 카테고리를 기준으로 친환경 대안을 찾고 있어요.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: EcoColors.muted,
-              fontWeight: FontWeight.w700,
-              height: 1.4,
-            ),
-          ),
-          const SizedBox(height: 8),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRecommendedItemsCard() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const EcoSectionHeader(title: '추천 상품'),
-        const SizedBox(height: 10),
-        if (_recommendedItems.isEmpty)
-          const _EmptyCard(message: '추천 상품이 없습니다.')
-        else
-          ..._recommendedItems.map((item) {
-            final map = item as Map<String, dynamic>;
-
-            final originalItem = map['originalItem'] ?? '-';
-            final recommendedItem = map['recommendedItem'] ?? '-';
-            final reason = '${map['reason'] ?? ''}';
-            final companyName = map['companyName'];
-            final certificationNo = map['certificationNo'];
-            final sourceName = map['sourceName'];
-
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: EcoCard(
-                padding: const EdgeInsets.all(18),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    EcoPill(
-                      label: '대체 추천',
-                      icon: Icons.autorenew_rounded,
-                      background: EcoColors.primary.withValues(alpha: 0.12),
-                    ),
-                    const SizedBox(height: 14),
-                    Text(
-                      '$recommendedItem',
-                      style: const TextStyle(
-                        color: EcoColors.text,
-                        fontSize: 19,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -0.3,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      '기존 품목: $originalItem',
-                      style: const TextStyle(
-                        color: EcoColors.muted,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    if (reason.isNotEmpty) ...[
-                      const SizedBox(height: 12),
-                      Text(
-                        reason,
-                        style: const TextStyle(
-                          color: EcoColors.text,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          height: 1.45,
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 14),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        if (companyName != null)
-                          _MetaChip(label: '업체 $companyName'),
-                        if (certificationNo != null)
-                          _MetaChip(label: '인증 $certificationNo'),
-                        if (sourceName != null)
-                          _MetaChip(label: '출처 $sourceName'),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }),
-      ],
-    );
-  }
-
-  Widget _buildRecommendedPlacesCard() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        EcoSectionHeader(
-          title: '추천 장소',
-          trailing: '지도 보기',
-          onTapTrailing: _openEcoPlaceMap,
-        ),
-        const SizedBox(height: 10),
-        if (_recommendedPlaces.isEmpty)
-          const _EmptyCard(message: '관련 친환경 장소 정보가 없습니다.')
-        else ...[
-          const Padding(
-            padding: EdgeInsets.only(bottom: 12),
-            child: Text(
-              '소비 품목과 관련된 친환경 장소 유형을 보여드려요.',
-              style: TextStyle(
-                color: EcoColors.muted,
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          ..._recommendedPlaces.map((place) {
-            final map = place as Map<String, dynamic>;
-
-            final placeName = map['placeName'] ?? '-';
-            final placeType = map['placeType'] ?? '-';
-            final address = map['address'] ?? '-';
-            final reason = '${map['reason'] ?? ''}';
-
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: EcoCard(
-                padding: const EdgeInsets.all(18),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 46,
-                      height: 46,
-                      decoration: BoxDecoration(
-                        color: EcoColors.primary.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: const Icon(
-                        Icons.place_outlined,
-                        color: EcoColors.secondary,
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '$placeName',
-                            style: const TextStyle(
-                              color: EcoColors.text,
-                              fontSize: 17,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: -0.2,
-                            ),
-                          ),
-                          const SizedBox(height: 5),
-                          Text(
-                            '$placeType · $address',
-                            style: const TextStyle(
-                              color: EcoColors.muted,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              height: 1.35,
-                            ),
-                          ),
-                          if (reason.isNotEmpty) ...[
-                            const SizedBox(height: 10),
-                            Text(
-                              reason,
-                              style: const TextStyle(
-                                color: EcoColors.text,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
-                                height: 1.4,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }),
-          const SizedBox(height: 4),
-          _MapCtaButton(onTap: _openEcoPlaceMap),
-        ],
-      ],
-    );
+    return '$value'.trim();
   }
 
   void _openEcoPlaceMap() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const EcoPlaceMapPage()),
+      MaterialPageRoute(
+        builder: (_) => const EcoPlaceMapPage(),
+      ),
     );
   }
-}
-
-class _DarkMetric extends StatelessWidget {
-  const _DarkMetric({required this.label, required this.value});
-
-  final String label;
-  final String value;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.11),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              color: Color(0xFFD5E7DA),
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.w900,
+    if (_isLoading) {
+      return _buildLoadingView();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildRecommendedItemsSection(),
+        const SizedBox(height: 28),
+        _buildRecommendedPlacesSection(),
+        if (_itemError != null || _placeError != null) ...[
+          const SizedBox(height: 16),
+          Center(
+            child: TextButton.icon(
+              onPressed: _retryRecommendations,
+              style: TextButton.styleFrom(
+                foregroundColor: EcoColors.secondary,
+                textStyle: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              icon: const Icon(
+                Icons.refresh_rounded,
+                size: 19,
+              ),
+              label: const Text('추천 다시 불러오기'),
             ),
           ),
         ],
+      ],
+    );
+  }
+
+  Widget _buildLoadingView() {
+    return EcoCard(
+      padding: const EdgeInsets.all(22),
+      child: Column(
+        children: [
+          CircularProgressIndicator(
+            color: EcoColors.primary,
+            backgroundColor:
+                EcoColors.primary.withValues(alpha: 0.12),
+          ),
+          const SizedBox(height: 18),
+          const Text(
+            '추천 결과를 불러오는 중이에요',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: EcoColors.text,
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.3,
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            '저장된 품목을 기준으로 친환경 상품과 장소를 찾고 있어요.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: EcoColors.muted,
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              letterSpacing: -0.15,
+              height: 1.4,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecommendedItemsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const EcoSectionHeader(
+          title: '추천 상품',
+        ),
+        const SizedBox(height: 5),
+        const Text(
+          '소비한 품목을 기준으로 친환경 대안을 골라봤어요.',
+          style: TextStyle(
+            color: EcoColors.muted,
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            letterSpacing: -0.15,
+            height: 1.4,
+          ),
+        ),
+        const SizedBox(height: 14),
+        if (_recommendedItems.isEmpty)
+          _EmptyCard(
+            icon: Icons.eco_outlined,
+            message: _itemError ?? '추천 상품이 없습니다.',
+          )
+        else
+          SizedBox(
+            height: 276,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: _recommendedItems.length,
+              separatorBuilder: (_, __) {
+                return const SizedBox(width: 12);
+              },
+              itemBuilder: (context, index) {
+                final item = _recommendedItems[index];
+
+                final map = item is Map
+                    ? Map<String, dynamic>.from(item)
+                    : <String, dynamic>{};
+
+                return _buildItemCard(map);
+              },
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildItemCard(
+    Map<String, dynamic> map,
+  ) {
+    final screenWidth = MediaQuery.sizeOf(context).width;
+
+    final cardWidth = (screenWidth * 0.76)
+        .clamp(260.0, 340.0)
+        .toDouble();
+
+    final originalItem = _readText(
+      map,
+      'originalItem',
+    );
+
+    final recommendedItem = _readText(
+      map,
+      'recommendedItem',
+    );
+
+    final reason = _readText(
+      map,
+      'reason',
+    );
+
+    final companyName = _readText(
+      map,
+      'companyName',
+    );
+
+    final certificationNo = _readText(
+      map,
+      'certificationNo',
+    );
+
+    final sourceName = _readText(
+      map,
+      'sourceName',
+    );
+
+    return SizedBox(
+      width: cardWidth,
+      child: EcoCard(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            EcoPill(
+              label: originalItem.isEmpty
+                  ? '친환경 추천'
+                  : '$originalItem 대안',
+              icon: Icons.autorenew_rounded,
+              background:
+                  EcoColors.primary.withValues(alpha: 0.12),
+            ),
+            const SizedBox(height: 15),
+            Text(
+              recommendedItem.isEmpty
+                  ? '친환경 추천 상품'
+                  : recommendedItem,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: EcoColors.text,
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.35,
+                height: 1.3,
+              ),
+            ),
+            if (reason.isNotEmpty) ...[
+              const SizedBox(height: 9),
+              Text(
+                reason,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: EcoColors.text,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: -0.1,
+                  height: 1.45,
+                ),
+              ),
+            ],
+            const Spacer(),
+            Wrap(
+              spacing: 7,
+              runSpacing: 7,
+              children: [
+                if (companyName.isNotEmpty)
+                  _MetaChip(
+                    label: companyName,
+                    icon: Icons.business_outlined,
+                  ),
+                if (certificationNo.isNotEmpty)
+                  _MetaChip(
+                    label: certificationNo,
+                    icon: Icons.verified_outlined,
+                  ),
+                if (sourceName.isNotEmpty)
+                  _MetaChip(
+                    label: sourceName,
+                    icon: Icons.source_outlined,
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRecommendedPlacesSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        EcoSectionHeader(
+          title: '추천 장소',
+          onTapTrailing: _openEcoPlaceMap,
+        ),
+        const SizedBox(height: 5),
+        const Text(
+          '소비 품목과 관련된 제로웨이스트 장소를 모아봤어요.',
+          style: TextStyle(
+            color: EcoColors.muted,
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            letterSpacing: -0.15,
+            height: 1.4,
+          ),
+        ),
+        const SizedBox(height: 14),
+        if (_recommendedPlaces.isEmpty)
+          _EmptyCard(
+            icon: Icons.location_on_outlined,
+            message:
+                _placeError ?? '관련 제로웨이스트 장소가 없습니다.',
+          )
+        else ...[
+          SizedBox(
+            height: 250,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: _recommendedPlaces.length,
+              separatorBuilder: (_, __) {
+                return const SizedBox(width: 12);
+              },
+              itemBuilder: (context, index) {
+                final place = _recommendedPlaces[index];
+
+                final map = place is Map
+                    ? Map<String, dynamic>.from(place)
+                    : <String, dynamic>{};
+
+                return _buildPlaceCard(map);
+              },
+            ),
+          ),
+          const SizedBox(height: 14),
+          _MapCtaButton(
+            onTap: _openEcoPlaceMap,
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildPlaceCard(
+    Map<String, dynamic> map,
+  ) {
+    final screenWidth = MediaQuery.sizeOf(context).width;
+
+    final cardWidth = (screenWidth * 0.8)
+        .clamp(275.0, 350.0)
+        .toDouble();
+
+    final placeName = _readText(
+      map,
+      'placeName',
+    );
+
+    final placeType = _readText(
+      map,
+      'placeType',
+    );
+
+    final address = _readText(
+      map,
+      'address',
+    );
+
+    final reason = _readText(
+      map,
+      'reason',
+    );
+
+    return SizedBox(
+      width: cardWidth,
+      child: EcoCard(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: EcoColors.primary.withValues(
+                      alpha: 0.12,
+                    ),
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  child: const Icon(
+                    Icons.place_outlined,
+                    color: EcoColors.secondary,
+                    size: 23,
+                  ),
+                ),
+                const SizedBox(width: 13),
+                Expanded(
+                  child: Text(
+                    placeName.isEmpty
+                        ? '친환경 장소'
+                        : placeName,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: EcoColors.text,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.3,
+                      height: 1.3,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (placeType.isNotEmpty) ...[
+              const SizedBox(height: 13),
+              EcoPill(
+                label: placeType,
+                icon: Icons.eco_outlined,
+                background:
+                    EcoColors.primary.withValues(alpha: 0.12),
+              ),
+            ],
+            if (address.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(
+                    Icons.location_on_outlined,
+                    color: EcoColors.muted,
+                    size: 17,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      address,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: EcoColors.muted,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: -0.1,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+            if (reason.isNotEmpty) ...[
+              const SizedBox(height: 11),
+              Text(
+                reason,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: EcoColors.text,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: -0.1,
+                  height: 1.45,
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
 }
 
 class _MetaChip extends StatelessWidget {
-  const _MetaChip({required this.label});
+  const _MetaChip({
+    required this.label,
+    required this.icon,
+  });
 
   final String label;
+  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 9,
+        vertical: 6,
+      ),
       decoration: BoxDecoration(
         color: EcoColors.background,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: EcoColors.line),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: EcoColors.muted,
-          fontSize: 12,
-          fontWeight: FontWeight.w800,
+        border: Border.all(
+          color: EcoColors.line,
         ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 13,
+            color: EcoColors.muted,
+          ),
+          const SizedBox(width: 4),
+          ConstrainedBox(
+            constraints: const BoxConstraints(
+              maxWidth: 130,
+            ),
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: EcoColors.muted,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
 class _MapCtaButton extends StatelessWidget {
-  const _MapCtaButton({required this.onTap});
+  const _MapCtaButton({
+    required this.onTap,
+  });
 
   final VoidCallback onTap;
 
@@ -570,56 +688,61 @@ class _MapCtaButton extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(20),
         onTap: onTap,
         child: Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+          padding: const EdgeInsets.symmetric(
+            horizontal: 17,
+            vertical: 14,
+          ),
           decoration: BoxDecoration(
             color: EcoColors.secondary,
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: EcoColors.secondary.withValues(alpha: 0.18),
-                blurRadius: 18,
-                offset: const Offset(0, 10),
+                color: EcoColors.secondary.withValues(
+                  alpha: 0.16,
+                ),
+                blurRadius: 16,
+                offset: const Offset(0, 8),
               ),
             ],
           ),
           child: Row(
             children: [
               Container(
-                width: 38,
-                height: 38,
+                width: 36,
+                height: 36,
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(13),
                 ),
                 child: const Icon(
                   Icons.map_outlined,
                   color: Colors.white,
-                  size: 21,
+                  size: 20,
                 ),
               ),
-              const SizedBox(width: 13),
+              const SizedBox(width: 12),
               const Expanded(
                 child: Text(
-                  '친환경 장소 지도 보기',
+                  '더 많은 제로웨이스트 장소 보기',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w900,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
                     letterSpacing: -0.2,
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               const Icon(
                 Icons.chevron_right_rounded,
                 color: Colors.white,
-                size: 24,
+                size: 23,
               ),
             ],
           ),
@@ -630,57 +753,37 @@ class _MapCtaButton extends StatelessWidget {
 }
 
 class _EmptyCard extends StatelessWidget {
-  const _EmptyCard({required this.message});
+  const _EmptyCard({
+    required this.icon,
+    required this.message,
+  });
 
+  final IconData icon;
   final String message;
 
   @override
   Widget build(BuildContext context) {
     return EcoCard(
+      padding: const EdgeInsets.all(22),
       child: Column(
         children: [
           Icon(
-            Icons.eco_outlined,
+            icon,
             color: EcoColors.primary.withValues(alpha: 0.7),
-            size: 38,
+            size: 36,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 11),
           Text(
             message,
             textAlign: TextAlign.center,
             style: const TextStyle(
               color: EcoColors.text,
-              fontSize: 16,
-              fontWeight: FontWeight.w900,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              height: 1.4,
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _RoundIconButton extends StatelessWidget {
-  const _RoundIconButton({required this.icon, required this.onTap});
-
-  final IconData icon;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(999),
-      onTap: onTap,
-      child: Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          border: Border.all(color: EcoColors.line),
-          boxShadow: EcoShadow.soft,
-        ),
-        child: Icon(icon, color: EcoColors.text, size: 28),
       ),
     );
   }

@@ -76,7 +76,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
             return TextStyle(
               color: selected ? EcoColors.secondary : EcoColors.muted,
               fontSize: 11,
-              fontWeight: selected ? FontWeight.w900 : FontWeight.w700,
+              fontWeight: selected ? FontWeight.w700 : FontWeight.w700,
             );
           }),
           iconTheme: WidgetStateProperty.resolveWith((states) {

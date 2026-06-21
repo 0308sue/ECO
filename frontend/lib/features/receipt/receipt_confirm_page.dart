@@ -1,11 +1,7 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 
-import '../../core/constants/api_constants.dart';
 import '../../core/theme/eco_design_system.dart';
-import '../recommendation/recommendation_result_page.dart';
+import 'receipt_result_page.dart';
 
 class ReceiptConfirmPage extends StatefulWidget {
   const ReceiptConfirmPage({
@@ -22,14 +18,13 @@ class ReceiptConfirmPage extends StatefulWidget {
   final Map<String, dynamic> analysisResult;
 
   @override
-  State<ReceiptConfirmPage> createState() => _ReceiptConfirmPageState();
+  State<ReceiptConfirmPage> createState() =>
+      _ReceiptConfirmPageState();
 }
 
-class _ReceiptConfirmPageState extends State<ReceiptConfirmPage> {
+class _ReceiptConfirmPageState
+    extends State<ReceiptConfirmPage> {
   late List<Map<String, dynamic>> _editableItems;
-
-  Map<String, dynamic>? _savedResult;
-  bool _isSaving = false;
 
   @override
   void initState() {
@@ -38,83 +33,78 @@ class _ReceiptConfirmPageState extends State<ReceiptConfirmPage> {
     final items = widget.analysisResult['items'];
 
     _editableItems = items is List
-        ? items.map((item) {
-            final map = item as Map<String, dynamic>;
+        ? items.map<Map<String, dynamic>>((item) {
+            final map = item is Map
+                ? Map<String, dynamic>.from(item)
+                : <String, dynamic>{};
 
             return {
-              'originalName': map['originalName'] ?? map['name'] ?? '',
+              'originalName':
+                  map['originalName'] ?? map['name'] ?? '',
               'price': map['price'] ?? 0,
             };
           }).toList()
         : [];
   }
 
-  Future<void> _saveFinalReceipt() async {
-    final finalItems = _editableItems
-        .map((item) {
-          final name = '${item['originalName'] ?? ''}'.trim();
-          final price = _parsePrice(item['price']);
+  void _saveFinalReceipt() {
+    FocusScope.of(context).unfocus();
 
-          return {'name': name, 'price': price};
+    final finalItems = _editableItems
+        .map<Map<String, dynamic>>((item) {
+          final name =
+              '${item['originalName'] ?? ''}'.trim();
+
+          final price = _parsePrice(
+            item['price'],
+          );
+
+          return {
+            'name': name,
+            'price': price,
+          };
         })
         .where((item) {
-          final name = '${item['name']}'.trim();
-          final price = item['price'] as int;
+          final name =
+              '${item['name'] ?? ''}'.trim();
+
+          final price =
+              _parsePrice(item['price']);
 
           return name.isNotEmpty && price > 0;
         })
         .toList();
 
     if (finalItems.isEmpty) {
-      _showMessage('저장할 품목이 없습니다. 품목명과 가격을 확인해 주세요.');
+      _showMessage(
+        '저장할 품목이 없습니다. 품목명과 가격을 확인해 주세요.',
+      );
       return;
     }
 
-    setState(() {
-      _isSaving = true;
-    });
-
-    try {
-      final response = await http.post(
-        Uri.parse(receiptSaveUrl),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'userId': widget.userId,
-          'storeName': widget.analysisResult['storeName'],
-          'purchasedAt': widget.analysisResult['purchasedAt'],
-          'ocrText': widget.ocrText,
-          'ocrLines': widget.ocrLines,
-          'items': finalItems,
-        }),
-      );
-
-      final decodedBody = utf8.decode(response.bodyBytes);
-
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        final result = jsonDecode(decodedBody) as Map<String, dynamic>;
-
-        setState(() {
-          _savedResult = result;
-        });
-
-        _showMessage('영수증이 최종 저장되었습니다.');
-      } else {
-        _showMessage('저장 오류 ${response.statusCode}: $decodedBody');
-      }
-    } catch (e) {
-      _showMessage('저장 요청 오류: $e');
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isSaving = false;
-        });
-      }
-    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ReceiptResultPage(
+          userId: widget.userId,
+          storeName:
+              '${widget.analysisResult['storeName'] ?? ''}',
+          purchasedAt:
+              widget.analysisResult['purchasedAt'],
+          ocrText: widget.ocrText,
+          ocrLines: widget.ocrLines,
+          items: finalItems,
+        ),
+      ),
+    );
   }
 
   void _addItem() {
     setState(() {
-      _editableItems.add({'originalName': '', 'price': 0});
+      _editableItems.add({
+        'originalName': '',
+        'price': 0,
+      });
     });
   }
 
@@ -133,29 +123,14 @@ class _ReceiptConfirmPageState extends State<ReceiptConfirmPage> {
       return value.toInt();
     }
 
-    final text = value.toString().replaceAll(RegExp(r'[^0-9]'), '');
+    final text = value
+        .toString()
+        .replaceAll(
+          RegExp(r'[^0-9]'),
+          '',
+        );
+
     return int.tryParse(text) ?? 0;
-  }
-
-  Map<String, dynamic>? get _summary {
-    final summary = _savedResult?['summary'];
-    return summary is Map<String, dynamic> ? summary : null;
-  }
-
-  void _openRecommendationResult() {
-    final savedResult = _savedResult;
-
-    if (savedResult == null) {
-      _showMessage('저장된 영수증 정보가 없습니다.');
-      return;
-    }
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => RecommendationResultPage(savedResult: savedResult),
-      ),
-    );
   }
 
   void _showMessage(String message) {
@@ -163,68 +138,62 @@ class _ReceiptConfirmPageState extends State<ReceiptConfirmPage> {
       return;
     }
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final summary = _summary;
-
     return Scaffold(
       backgroundColor: EcoColors.background,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 34),
+          padding: const EdgeInsets.fromLTRB(
+            20,
+            20,
+            20,
+            34,
+          ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+            crossAxisAlignment:
+                CrossAxisAlignment.stretch,
             children: [
               _buildHeader(),
-              const SizedBox(height: 18),
+              const SizedBox(height: 20),
               _buildOverviewCard(),
               const SizedBox(height: 18),
               _buildEditableItemList(),
               const SizedBox(height: 18),
-              FilledButton(
-                onPressed: _isSaving ? null : _saveFinalReceipt,
+              FilledButton.icon(
+                onPressed: _saveFinalReceipt,
                 style: FilledButton.styleFrom(
-                  backgroundColor: EcoColors.secondary,
+                  backgroundColor:
+                      EcoColors.secondary,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  minimumSize:
+                      const Size.fromHeight(54),
+                  elevation: 0,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(18),
+                    borderRadius:
+                        BorderRadius.circular(18),
                   ),
                 ),
-                child: Text(
-                  _isSaving ? '저장 중...' : '최종 저장',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w900,
+                icon: const Icon(
+                  Icons.save_outlined,
+                  size: 21,
+                ),
+                label: const Text(
+                  '최종 영수증 저장',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.2,
                   ),
                 ),
               ),
-              if (_savedResult != null) ...[
-                const SizedBox(height: 22),
-                if (summary != null) _buildSummaryCard(summary),
-                const SizedBox(height: 14),
-                FilledButton.icon(
-                  onPressed: _openRecommendationResult,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: EcoColors.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                  ),
-                  icon: const Icon(Icons.eco_outlined),
-                  label: const Text(
-                    '추천 결과 보기',
-                    style: TextStyle(fontWeight: FontWeight.w900),
-                  ),
-                ),
-              ],
             ],
           ),
         ),
@@ -237,29 +206,34 @@ class _ReceiptConfirmPageState extends State<ReceiptConfirmPage> {
       children: [
         _RoundIconButton(
           icon: Icons.chevron_left_rounded,
-          onTap: () => Navigator.maybePop(context),
+          onTap: () =>
+              Navigator.maybePop(context),
         ),
         const SizedBox(width: 12),
         const Expanded(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment:
+                CrossAxisAlignment.start,
             children: [
               Text(
                 '품목 확인',
                 style: TextStyle(
                   color: EcoColors.text,
-                  fontSize: 30,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -0.8,
+                  fontSize: 28,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.9,
+                  height: 1.05,
                 ),
               ),
-              SizedBox(height: 4),
+              SizedBox(height: 5),
               Text(
-                '인식된 내용을 확인하고 저장해요',
+                '인식된 내용을 확인하고 저장해요.',
                 style: TextStyle(
                   color: EcoColors.muted,
                   fontSize: 14,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: -0.2,
+                  height: 1.4,
                 ),
               ),
             ],
@@ -270,84 +244,143 @@ class _ReceiptConfirmPageState extends State<ReceiptConfirmPage> {
   }
 
   Widget _buildOverviewCard() {
-    final storeName = '${widget.analysisResult['storeName'] ?? '영수증'}';
+    final rawStoreName =
+        '${widget.analysisResult['storeName'] ?? ''}'
+            .trim();
+
+    final storeName = rawStoreName.isEmpty
+        ? '영수증'
+        : rawStoreName;
+
     final total = _editableItems.fold<int>(
       0,
-      (sum, item) => sum + _parsePrice(item['price']),
+      (sum, item) {
+        return sum +
+            _parsePrice(item['price']);
+      },
     );
 
     return EcoCard(
       color: EcoColors.secondary,
       radius: 28,
-      padding: const EdgeInsets.fromLTRB(22, 22, 22, 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
+      padding: EdgeInsets.zero,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(28),
+        child: Stack(
+          children: [
+            Positioned(
+              right: -44,
+              top: -56,
+              child: Container(
+                width: 165,
+                height: 165,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.16),
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: const Icon(
-                  Icons.receipt_long_rounded,
-                  color: Colors.white,
-                  size: 26,
+                  color: Colors.white.withValues(
+                    alpha: 0.05,
+                  ),
+                  shape: BoxShape.circle,
                 ),
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      storeName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 21,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -0.4,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '인식 품목 ${_editableItems.length}개',
-                      style: const TextStyle(
-                        color: Color(0xFFD5E7DA),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ],
+            ),
+            Positioned(
+              right: 24,
+              bottom: 20,
+              child: Icon(
+                Icons.receipt_long_outlined,
+                color: Colors.white.withValues(
+                  alpha: 0.06,
                 ),
+                size: 90,
               ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            '예상 결제 금액',
-            style: TextStyle(
-              color: Color(0xFFD5E7DA),
-              fontSize: 14,
-              fontWeight: FontWeight.w800,
             ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            _formatWon(total),
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 34,
-              fontWeight: FontWeight.w900,
-              letterSpacing: -1.0,
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                22,
+                22,
+                22,
+                24,
+              ),
+              child: Column(
+                crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 46,
+                        height: 46,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(
+                            alpha: 0.16,
+                          ),
+                          borderRadius:
+                              BorderRadius.circular(17),
+                        ),
+                        child: const Icon(
+                          Icons.receipt_long_rounded,
+                          color: Colors.white,
+                          size: 25,
+                        ),
+                      ),
+                      const SizedBox(width: 13),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment:
+                              CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              storeName,
+                              maxLines: 1,
+                              overflow:
+                                  TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight:
+                                    FontWeight.w700,
+                                letterSpacing: -0.4,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '인식 품목 ${_editableItems.length}개',
+                              style: const TextStyle(
+                                color:
+                                    Color(0xFFD5E7DA),
+                                fontSize: 13,
+                                fontWeight:
+                                    FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 22),
+                  const Text(
+                    '예상 결제 금액',
+                    style: TextStyle(
+                      color: Color(0xFFD5E7DA),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    _formatWon(total),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 34,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -1,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -355,30 +388,43 @@ class _ReceiptConfirmPageState extends State<ReceiptConfirmPage> {
   Widget _buildEditableItemList() {
     if (_editableItems.isEmpty) {
       return EcoCard(
+        padding: const EdgeInsets.all(20),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+          crossAxisAlignment:
+              CrossAxisAlignment.stretch,
           children: [
             const Text(
               '품목 후보가 없습니다.',
               style: TextStyle(
                 color: EcoColors.text,
                 fontSize: 18,
-                fontWeight: FontWeight.w900,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.3,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 7),
             const Text(
               '영수증에서 품목을 찾지 못했어요. 직접 추가해 주세요.',
               style: TextStyle(
                 color: EcoColors.muted,
-                fontWeight: FontWeight.w700,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                height: 1.4,
               ),
             ),
             const SizedBox(height: 16),
             OutlinedButton.icon(
               onPressed: _addItem,
-              icon: const Icon(Icons.add_rounded),
-              label: const Text('품목 직접 추가'),
+              icon: const Icon(
+                Icons.add_rounded,
+                size: 19,
+              ),
+              label: const Text(
+                '품목 직접 추가',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
           ],
         ),
@@ -386,32 +432,42 @@ class _ReceiptConfirmPageState extends State<ReceiptConfirmPage> {
     }
 
     return EcoCard(
-      padding: const EdgeInsets.fromLTRB(18, 18, 18, 8),
+      padding: const EdgeInsets.fromLTRB(
+        18,
+        18,
+        18,
+        8,
+      ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        crossAxisAlignment:
+            CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
               const Expanded(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment:
+                      CrossAxisAlignment.start,
                   children: [
                     Text(
                       '품목 후보',
                       style: TextStyle(
                         color: EcoColors.text,
-                        fontSize: 21,
-                        fontWeight: FontWeight.w900,
+                        fontSize: 20,
+                        fontWeight:
+                            FontWeight.w700,
                         letterSpacing: -0.4,
                       ),
                     ),
                     SizedBox(height: 5),
                     Text(
-                      '이름과 금액만 확인하면 저장할 수 있어요.',
+                      '이름과 금액을 확인한 뒤 저장해 주세요.',
                       style: TextStyle(
                         color: EcoColors.muted,
                         fontSize: 13,
-                        fontWeight: FontWeight.w700,
+                        fontWeight:
+                            FontWeight.w500,
+                        height: 1.4,
                       ),
                     ),
                   ],
@@ -419,17 +475,28 @@ class _ReceiptConfirmPageState extends State<ReceiptConfirmPage> {
               ),
               TextButton.icon(
                 onPressed: _addItem,
-                icon: const Icon(Icons.add_rounded, size: 19),
+                icon: const Icon(
+                  Icons.add_rounded,
+                  size: 18,
+                ),
                 label: const Text('추가'),
                 style: TextButton.styleFrom(
-                  foregroundColor: EcoColors.secondary,
-                  textStyle: const TextStyle(fontWeight: FontWeight.w900),
+                  foregroundColor:
+                      EcoColors.secondary,
+                  textStyle:
+                      const TextStyle(
+                    fontWeight:
+                        FontWeight.w600,
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 14),
-          ...List.generate(_editableItems.length, _buildItemEditor),
+          const SizedBox(height: 13),
+          ...List.generate(
+            _editableItems.length,
+            _buildItemEditor,
+          ),
         ],
       ),
     );
@@ -439,21 +506,31 @@ class _ReceiptConfirmPageState extends State<ReceiptConfirmPage> {
     final item = _editableItems[index];
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(
+        bottom: 12,
+      ),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: EcoColors.background,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: EcoColors.line),
+        borderRadius:
+            BorderRadius.circular(18),
+        border: Border.all(
+          color: EcoColors.line,
+        ),
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment:
+            CrossAxisAlignment.start,
         children: [
           Expanded(
             flex: 5,
             child: TextFormField(
-              initialValue: '${item['originalName'] ?? ''}',
-              decoration: _inputDecoration('품목명'),
+              initialValue:
+                  '${item['originalName'] ?? ''}',
+              decoration:
+                  _inputDecoration('품목명'),
+              textInputAction:
+                  TextInputAction.next,
               onChanged: (value) {
                 item['originalName'] = value;
               },
@@ -463,104 +540,68 @@ class _ReceiptConfirmPageState extends State<ReceiptConfirmPage> {
           Expanded(
             flex: 3,
             child: TextFormField(
-              initialValue: '${item['price'] ?? 0}',
-              decoration: _inputDecoration('가격'),
-              keyboardType: TextInputType.number,
+              initialValue:
+                  '${item['price'] ?? 0}',
+              decoration:
+                  _inputDecoration('가격'),
+              keyboardType:
+                  TextInputType.number,
               onChanged: (value) {
-                item['price'] = _parsePrice(value);
+                setState(() {
+                  item['price'] =
+                      _parsePrice(value);
+                });
               },
             ),
           ),
           const SizedBox(width: 4),
           IconButton(
-            onPressed: () => _removeItem(index),
+            onPressed: () =>
+                _removeItem(index),
             color: EcoColors.muted,
-            icon: const Icon(Icons.delete_outline_rounded),
+            icon: const Icon(
+              Icons.delete_outline_rounded,
+            ),
           ),
         ],
       ),
     );
   }
 
-  InputDecoration _inputDecoration(String label) {
+  InputDecoration _inputDecoration(
+    String label,
+  ) {
     return InputDecoration(
       labelText: label,
+      labelStyle: const TextStyle(
+        color: EcoColors.muted,
+        fontSize: 13,
+        fontWeight: FontWeight.w500,
+      ),
       filled: true,
       fillColor: Colors.white,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      contentPadding:
+          const EdgeInsets.symmetric(
+        horizontal: 12,
+        vertical: 12,
+      ),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius:
+            BorderRadius.circular(14),
+        borderSide: BorderSide.none,
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius:
+            BorderRadius.circular(14),
         borderSide: BorderSide.none,
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: EcoColors.primary, width: 1.4),
-      ),
-    );
-  }
-
-  Widget _buildSummaryCard(Map<String, dynamic> summary) {
-    return EcoCard(
-      border: Border.all(color: EcoColors.primary.withValues(alpha: 0.28)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Expanded(
-                child: Text(
-                  '저장 완료',
-                  style: TextStyle(
-                    color: EcoColors.text,
-                    fontSize: 21,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ),
-              EcoPill(
-                label: '분석 완료',
-                icon: Icons.check_rounded,
-                background: EcoColors.primary.withValues(alpha: 0.14),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _MiniMetric(
-                  label: '총 금액',
-                  value: '${summary['totalPrice'] ?? '-'}원',
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _MiniMetric(
-                  label: '탄소 점수',
-                  value: '${summary['averageCarbonScore'] ?? '-'}',
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: _MiniMetric(
-                  label: '품목',
-                  value: '${summary['itemCount'] ?? '-'}개',
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _MiniMetric(
-                  label: '주요 카테고리',
-                  value: '${summary['topCategory'] ?? '-'}',
-                ),
-              ),
-            ],
-          ),
-        ],
+        borderRadius:
+            BorderRadius.circular(14),
+        borderSide: const BorderSide(
+          color: EcoColors.primary,
+          width: 1.4,
+        ),
       ),
     );
   }
@@ -570,66 +611,37 @@ class _ReceiptConfirmPageState extends State<ReceiptConfirmPage> {
   }
 
   String _comma(int number) {
-    final value = number.abs().toString();
+    final value =
+        number.abs().toString();
+
     final buffer = StringBuffer();
 
-    for (int i = 0; i < value.length; i++) {
-      final reverseIndex = value.length - i;
+    for (int i = 0;
+        i < value.length;
+        i++) {
+      final reverseIndex =
+          value.length - i;
+
       buffer.write(value[i]);
 
-      if (reverseIndex > 1 && reverseIndex % 3 == 1) {
+      if (reverseIndex > 1 &&
+          reverseIndex % 3 == 1) {
         buffer.write(',');
       }
     }
 
-    return number < 0 ? '-$buffer' : buffer.toString();
+    return number < 0
+        ? '-$buffer'
+        : buffer.toString();
   }
 }
 
-class _MiniMetric extends StatelessWidget {
-  const _MiniMetric({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: EcoColors.background,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              color: EcoColors.muted,
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: EcoColors.text,
-              fontSize: 16,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _RoundIconButton extends StatelessWidget {
-  const _RoundIconButton({required this.icon, required this.onTap});
+class _RoundIconButton
+    extends StatelessWidget {
+  const _RoundIconButton({
+    required this.icon,
+    required this.onTap,
+  });
 
   final IconData icon;
   final VoidCallback onTap;
@@ -637,7 +649,8 @@ class _RoundIconButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      borderRadius: BorderRadius.circular(999),
+      borderRadius:
+          BorderRadius.circular(999),
       onTap: onTap,
       child: Container(
         width: 44,
@@ -645,10 +658,16 @@ class _RoundIconButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           shape: BoxShape.circle,
-          border: Border.all(color: EcoColors.line),
+          border: Border.all(
+            color: EcoColors.line,
+          ),
           boxShadow: EcoShadow.soft,
         ),
-        child: Icon(icon, color: EcoColors.text, size: 28),
+        child: Icon(
+          icon,
+          color: EcoColors.text,
+          size: 27,
+        ),
       ),
     );
   }

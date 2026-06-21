@@ -115,7 +115,7 @@ class _CarbonDashboardPageState extends State<CarbonDashboardPage> {
                   style: TextStyle(
                     color: EcoColors.text,
                     fontSize: 30,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                     letterSpacing: -0.7,
                   ),
                 ),
@@ -269,7 +269,7 @@ class _TotalCarbonCard extends StatelessWidget {
             style: TextStyle(
               color: Color(0xFFCDE2D4),
               fontSize: 15,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: 10),
@@ -278,7 +278,7 @@ class _TotalCarbonCard extends StatelessWidget {
             style: const TextStyle(
               color: Colors.white,
               fontSize: 42,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w700,
               letterSpacing: -1,
             ),
           ),
@@ -321,7 +321,7 @@ class _TotalCarbonCard extends StatelessWidget {
                   style: const TextStyle(
                     color: EcoColors.text,
                     fontSize: 17,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ],
@@ -411,7 +411,7 @@ class _SmallSummaryCard extends StatelessWidget {
             style: const TextStyle(
               color: _CarbonDashboardPageState.textColor,
               fontSize: 20,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ],
@@ -449,7 +449,7 @@ class _CategoryScoreBar extends StatelessWidget {
                     style: const TextStyle(
                       color: EcoColors.text,
                       fontSize: 15,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
@@ -458,7 +458,7 @@ class _CategoryScoreBar extends StatelessWidget {
                   style: const TextStyle(
                     color: EcoColors.secondary,
                     fontSize: 14,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ],
@@ -514,7 +514,7 @@ class _TopCarbonItemTile extends StatelessWidget {
                   style: const TextStyle(
                     color: _CarbonDashboardPageState.textColor,
                     fontSize: 16,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -533,7 +533,7 @@ class _TopCarbonItemTile extends StatelessWidget {
             '${item.carbonScore}점',
             style: const TextStyle(
               color: EcoColors.secondary,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ],

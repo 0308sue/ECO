@@ -14,7 +14,7 @@ class HomePage extends StatefulWidget {
     required this.onTapEcoPlaceMap,
   });
 
-  static const Color backgroundColor = EcoColors.background;
+  static const Color backgroundColor =EcoColors.background;
   static const Color primaryColor = EcoColors.primary;
   static const Color darkGreen = EcoColors.secondary;
   static const Color cardColor = Colors.white;
@@ -189,15 +189,26 @@ class _HomePageState extends State<HomePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                '안녕하세요',
-                style: TextStyle(
-                  color: EcoColors.muted,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
-                ),
+              const Row(
+                children: [
+                  Text(
+                    '안녕하세요',
+                    style: TextStyle(
+                      color: EcoColors.muted,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                  SizedBox(width: 4),
+                  Icon(
+                    Icons.eco_rounded,
+                    size: 13,
+                    color: EcoColors.primary,
+                  ),
+                ],
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 2),
               Text(
                 nickname,
                 maxLines: 1,
@@ -205,8 +216,9 @@ class _HomePageState extends State<HomePage> {
                 style: const TextStyle(
                   color: EcoColors.text,
                   fontSize: 30,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -0.7,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -1.1,
+                  height: 1.0,
                 ),
               ),
             ],
@@ -231,7 +243,7 @@ class _HomePageState extends State<HomePage> {
         Expanded(
           child: _QuickActionCard(
             title: '추천 보기',
-            description: '친환경 장소 확인',
+            description: '제로웨이스트 장소 확인',
             icon: Icons.eco_rounded,
             onTap: widget.onTapEcoPlaceMap,
           ),
@@ -281,8 +293,8 @@ class _CarbonSummaryCard extends StatelessWidget {
             '이번 달 탄소 소비 점수',
             style: TextStyle(
               color: Color(0xFFD8E8D4),
-              fontSize: 15,
-              fontWeight: FontWeight.w900,
+              fontSize: 20,
+              fontWeight: FontWeight.w500,
             ),
           ),
           const SizedBox(height: 8),
@@ -294,7 +306,7 @@ class _CarbonSummaryCard extends StatelessWidget {
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 48,
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.w800,
                   letterSpacing: -1.2,
                   height: 1,
                 ),
@@ -306,7 +318,7 @@ class _CarbonSummaryCard extends StatelessWidget {
                   style: TextStyle(
                     color: Color(0xFFCDE2D4),
                     fontSize: 18,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
@@ -392,7 +404,7 @@ class _MiniInfoBox extends StatelessWidget {
             style: const TextStyle(
               color: Colors.white,
               fontSize: 16,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ],
@@ -446,7 +458,7 @@ class _HeroInfoRow extends StatelessWidget {
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 16,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ],
@@ -497,7 +509,7 @@ class _WarningCategoryCard extends StatelessWidget {
                   style: const TextStyle(
                     color: EcoColors.text,
                     fontSize: 15,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 5),
@@ -548,7 +560,7 @@ class _DashboardPreviewCard extends StatelessWidget {
                   style: TextStyle(
                     color: EcoColors.text,
                     fontSize: 18,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
@@ -631,7 +643,7 @@ class _QuickActionCard extends StatelessWidget {
                 style: const TextStyle(
                   color: HomePage.textColor,
                   fontSize: 16,
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
               const SizedBox(height: 4),
@@ -697,7 +709,7 @@ class _RecentRecordTile extends StatelessWidget {
                     style: const TextStyle(
                       color: HomePage.textColor,
                       fontSize: 16,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -725,7 +737,7 @@ class _RecentRecordTile extends StatelessWidget {
                 '${record.carbonScore}점',
                 style: const TextStyle(
                   color: Color(0xFF9A7411),
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ),
@@ -771,7 +783,7 @@ class _RecommendationMoveCard extends StatelessWidget {
                       style: TextStyle(
                         color: HomePage.textColor,
                         fontSize: 17,
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                     SizedBox(height: 4),
@@ -826,7 +838,7 @@ class _EmptyRecentPanel extends StatelessWidget {
             style: TextStyle(
               color: HomePage.textColor,
               fontSize: 16,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w700,
             ),
           ),
           SizedBox(height: 6),

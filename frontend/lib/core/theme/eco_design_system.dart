@@ -4,7 +4,7 @@ class EcoColors {
   static const primary = Color(0xFF67C587);
   static const secondary = Color(0xFF2F6B4F);
   static const accent = Color(0xFFF5C84C);
-  static const background = Color(0xFFF7F8F6);
+  static const background = Color(0xFFF9FAF7);
   static const text = Color(0xFF1F1F1F);
   static const muted = Color(0xFF7D8580);
   static const card = Colors.white;
@@ -97,7 +97,7 @@ class EcoSectionHeader extends StatelessWidget {
             style: const TextStyle(
               color: EcoColors.text,
               fontSize: 22,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w700,
               letterSpacing: -0.3,
             ),
           ),
@@ -109,7 +109,7 @@ class EcoSectionHeader extends StatelessWidget {
               trailing!,
               style: const TextStyle(
                 color: EcoColors.secondary,
-                fontWeight: FontWeight.w900,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),
@@ -152,7 +152,7 @@ class EcoPill extends StatelessWidget {
             style: TextStyle(
               color: foreground,
               fontSize: 13,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ],
@@ -210,7 +210,7 @@ class EcoStatTile extends StatelessWidget {
             style: const TextStyle(
               color: EcoColors.text,
               fontSize: 20,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ],
