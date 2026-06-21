@@ -14,9 +14,11 @@ class ReceiptScanPage extends StatefulWidget {
   const ReceiptScanPage({
     super.key,
     required this.userId,
+    required this.onTapEcoPlaceMap,
   });
 
   final String userId;
+  final VoidCallback onTapEcoPlaceMap;
 
   @override
   State<ReceiptScanPage> createState() => _ReceiptScanPageState();
@@ -89,6 +91,7 @@ class _ReceiptScanPageState extends State<ReceiptScanPage> {
             ocrText: ocrResult.ocrText,
             ocrLines: ocrResult.ocrLines,
             analysisResult: analysisResult,
+            onTapEcoPlaceMap: widget.onTapEcoPlaceMap,
           ),
         ),
       );

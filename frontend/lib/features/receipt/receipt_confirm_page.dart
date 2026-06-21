@@ -10,12 +10,14 @@ class ReceiptConfirmPage extends StatefulWidget {
     required this.ocrText,
     required this.ocrLines,
     required this.analysisResult,
+    required this.onTapEcoPlaceMap,
   });
 
   final String userId;
   final String ocrText;
   final List<Map<String, dynamic>> ocrLines;
   final Map<String, dynamic> analysisResult;
+  final VoidCallback onTapEcoPlaceMap;
 
   @override
   State<ReceiptConfirmPage> createState() =>
@@ -94,6 +96,8 @@ class _ReceiptConfirmPageState
           ocrText: widget.ocrText,
           ocrLines: widget.ocrLines,
           items: finalItems,
+          onTapEcoPlaceMap:
+              widget.onTapEcoPlaceMap,
         ),
       ),
     );
